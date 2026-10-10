@@ -701,7 +701,12 @@ export const SERVICE_RULES: Record<string, ServiceRule> = {
       'cursor.sh',
       'cursor.com'
     ],
+    hosts: [
+      '132.243.112.221 gemini.google.com',
+      '132.243.112.221 aistudio.google.com'
+    ],
     testTargets: [
+      { label: 'Google Gemini', target: 'https://gemini.google.com' },
       { label: 'ChatGPT', target: 'https://chatgpt.com' },
       { label: 'Claude', target: 'https://claude.ai' }
     ]

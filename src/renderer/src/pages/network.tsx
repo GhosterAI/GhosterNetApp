@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   FolderArchive,
   Globe2,
+  Info,
   Loader2,
   RefreshCw,
   RotateCcw,
@@ -36,6 +37,7 @@ import {
   dnsAiInstallService,
   dnsAiUninstallService,
   dnsAiTestDoh,
+  dnsAiCheckServices,
   modsList,
   modsToggle,
   modsRemove,
@@ -45,7 +47,8 @@ import {
   diagnosticsClearDiscordCache,
   type DnsPresetDescriptor,
   type DnsManagerStatus,
-  type DnsAiStatus
+  type DnsAiStatus,
+  type DnsAiServiceCheckResult
 } from '@renderer/utils/ipc'
 
 const NetworkPage: React.FC = () => {
@@ -57,6 +60,8 @@ const NetworkPage: React.FC = () => {
   const [dnsAiBusy, setDnsAiBusy] = useState(false)
   const [dohTestOutput, setDohTestOutput] = useState<string | null>(null)
   const [dohTesting, setDohTesting] = useState(false)
+  const [aiChecks, setAiChecks] = useState<DnsAiServiceCheckResult[] | null>(null)
+  const [aiChecking, setAiChecking] = useState(false)
 
   // DNS state
   const [presets, setPresets] = useState<DnsPresetDescriptor[]>([])
@@ -198,6 +203,32 @@ const NetworkPage: React.FC = () => {
       })
     } finally {
       setDohTesting(false)
+    }
+  }
+
+  const handleCheckAiServices = async (): Promise<void> => {
+    if (aiChecking) return
+    setAiChecking(true)
+    const tId = toast.loading('Проверяем доступность ИИ-сервисов (Gemini, ChatGPT, Claude)…')
+    try {
+      const res = await dnsAiCheckServices()
+      setAiChecks(res)
+      const geminiOk = res.find((r) => r.domain.includes('gemini'))?.httpOk
+      if (geminiOk) {
+        toast.success('Google Gemini и ИИ-сервисы доступны!', {
+          id: tId,
+          style: POWER_ON_BANNER_STYLE
+        })
+      } else {
+        toast.info('Проверка ИИ-сервисов завершена', { id: tId })
+      }
+    } catch (e) {
+      toast.error('Ошибка проверки ИИ-сервисов', {
+        id: tId,
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setAiChecking(false)
     }
   }
 
@@ -411,6 +442,19 @@ const NetworkPage: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="sm"
+                  onClick={() => void handleCheckAiServices()}
+                  disabled={aiChecking}
+                >
+                  {aiChecking ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Globe2 className="h-3.5 w-3.5 text-emerald-400" />
+                  )}
+                  Проверить ИИ
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => void handleTestDoh()}
                   disabled={dohTesting}
                 >
@@ -419,7 +463,7 @@ const NetworkPage: React.FC = () => {
                   ) : (
                     <Sparkles className="h-3.5 w-3.5" />
                   )}
-                  Проверить DoH
+                  Тест DoH
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => void refreshDnsAi()}>
                   <RefreshCw className="h-3.5 w-3.5" />
@@ -537,6 +581,80 @@ const NetworkPage: React.FC = () => {
                 </pre>
               </div>
             )}
+
+            {aiChecks && (
+              <div className="rounded-lg border border-border bg-background/60 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-foreground">
+                    Доступность ИИ-сервисов через DNS-AI:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAiChecks(null)}
+                    className="text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    Скрыть
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {aiChecks.map((check) => (
+                    <div
+                      key={check.domain}
+                      className={cn(
+                        'rounded border p-2.5 text-xs space-y-1',
+                        check.httpOk
+                          ? 'border-emerald-500/40 bg-emerald-500/10'
+                          : check.dnsOk
+                            ? 'border-amber-500/40 bg-amber-500/10'
+                            : 'border-destructive/40 bg-destructive/10'
+                      )}
+                    >
+                      <div className="flex items-center justify-between font-medium">
+                        <span>{check.name}</span>
+                        <span
+                          className={cn(
+                            'rounded px-1.5 py-0.5 text-[10px] font-semibold',
+                            check.httpOk
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : check.dnsOk
+                                ? 'bg-amber-500/20 text-amber-400'
+                                : 'bg-destructive/20 text-destructive'
+                          )}
+                        >
+                          {check.httpOk
+                            ? `Доступен (${check.statusCode || 200})`
+                            : check.dnsOk
+                              ? check.statusCode ? `Ответ HTTP ${check.statusCode}` : 'DNS OK, соединение...'
+                              : 'DNS ошибка'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+                        <span>{check.domain} → {check.ip || '—'}</span>
+                        <span>{check.latencyMs} мс</span>
+                      </div>
+                      {check.error && (
+                        <div className="text-[10px] text-destructive break-all">{check.error}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1 text-xs">
+              <div className="font-semibold flex items-center gap-1.5 text-primary">
+                <Info className="h-4 w-4" />
+                Если в браузере (Chrome / Edge / Яндекс) не открывается Gemini:
+              </div>
+              <ul className="list-disc pl-4 space-y-1 text-[11px] text-muted-foreground">
+                <li>
+                  <strong>Отключите «Безопасный DNS» в браузере:</strong> Настройки браузера → Конфиденциальность → Безопасность → выключите «Использовать безопасный DNS», чтобы браузер не отправлял запросы мимо системы к внешним серверам.
+                </li>
+                <li>
+                  <strong>Сбросьте кэш сокетов:</strong> перезапустите браузер или откройте вкладку в Режиме Инкогнито, чтобы браузер сбросил старое заблокированное соединение.
+                </li>
+              </ul>
+            </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
               <div className="flex flex-wrap items-center gap-2">

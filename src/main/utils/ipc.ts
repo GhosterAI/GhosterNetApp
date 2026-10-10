@@ -95,7 +95,8 @@ import {
   setDnsAiSettings,
   installDnsAiService,
   uninstallDnsAiService,
-  testDnsAiDoh
+  testDnsAiDoh,
+  checkDnsAiServices
 } from '../core/dns-ai'
 import {
   getAgStatus,
@@ -420,6 +421,7 @@ export function registerIpcMainHandlers(): void {
       testDnsAiDoh(domain as string | undefined, qtype as string | undefined)
     )
   )
+  ipcMain.handle('dnsAi:checkServices', h(() => checkDnsAiServices()))
 
   // ---- Antigravity Unlocker -----------------------------------------------
   ipcMain.handle('ag:status', h((deep) => getAgStatus(Boolean(deep))))

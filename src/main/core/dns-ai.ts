@@ -497,6 +497,11 @@ export async function enableDnsAi(): Promise<DnsAiStatusSnapshot> {
     'dns',
     `Шифрованный DNS-AI включён (режим: ${activeMode === 'native' ? 'Native DoH' : 'Stub 127.0.0.1:53'})`
   )
+  try {
+    await execFileAsync('ipconfig.exe', ['/flushdns'], { windowsHide: true, timeout: 4000 })
+  } catch {
+    // ignore
+  }
   if (reply.status) {
     return buildSnapshotFromPipeStatus(reply.status)
   }
@@ -519,6 +524,12 @@ export async function disableDnsAi(): Promise<DnsAiStatusSnapshot> {
     cachedSettings.enabled = false
     saveDiskSettings(cur)
     emitLog('warn', 'dns', `Отключение DNS-AI: ${e instanceof Error ? e.message : String(e)}`)
+  } finally {
+    try {
+      await execFileAsync('ipconfig.exe', ['/flushdns'], { windowsHide: true, timeout: 4000 })
+    } catch {
+      // ignore
+    }
   }
   return getDnsAiStatus()
 }
@@ -593,6 +604,11 @@ export async function uninstallDnsAiService(): Promise<DnsAiStatusSnapshot> {
   }
   await execFileAsync(bin, ['uninstall'], { windowsHide: true, timeout: 15000 })
   emitLog('info', 'dns', 'Служба DnsAiClient удалена и настройки DNS восстановлены')
+  try {
+    await execFileAsync('ipconfig.exe', ['/flushdns'], { windowsHide: true, timeout: 4000 })
+  } catch {
+    // ignore
+  }
   return getDnsAiStatus()
 }
 
@@ -626,4 +642,102 @@ export async function testDnsAiDoh(domain = 'proto.dns-ai.ru', qtype = 'TXT'): P
       latencyMs
     }
   }
+}
+
+export interface DnsAiServiceCheckResult {
+  name: string
+  domain: string
+  ip: string
+  dnsOk: boolean
+  httpOk: boolean
+  statusCode: number
+  latencyMs: number
+  error?: string
+}
+
+export async function checkDnsAiServices(): Promise<DnsAiServiceCheckResult[]> {
+  const dnsPromises = await import('node:dns/promises')
+  const https = await import('node:https')
+
+  const targets = [
+    { name: 'Google Gemini', domain: 'gemini.google.com' },
+    { name: 'Google AI Studio', domain: 'aistudio.google.com' },
+    { name: 'ChatGPT', domain: 'chatgpt.com' },
+    { name: 'Claude AI', domain: 'claude.ai' }
+  ]
+
+  const results: DnsAiServiceCheckResult[] = []
+
+  for (const t of targets) {
+    const t0 = Date.now()
+    let ip = ''
+    let dnsOk = false
+    let httpOk = false
+    let statusCode = 0
+    let error = ''
+
+    try {
+      const res = await dnsPromises.lookup(t.domain)
+      if (res && res.address) {
+        ip = res.address
+        dnsOk = true
+      }
+    } catch (e: unknown) {
+      error = `DNS: ${e instanceof Error ? e.message : String(e)}`
+    }
+
+    if (dnsOk && ip) {
+      try {
+        statusCode = await new Promise<number>((resolve, reject) => {
+          const req = https.request(
+            {
+              hostname: t.domain,
+              port: 443,
+              path: '/',
+              method: 'GET',
+              headers: {
+                'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+                Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+              },
+              timeout: 6000
+            },
+            (r) => {
+              r.resume()
+              resolve(r.statusCode ?? 0)
+            }
+          )
+          req.on('error', reject)
+          req.on('timeout', () => {
+            req.destroy()
+            reject(new Error('Тайм-аут запроса (6 с)'))
+          })
+          req.end()
+        })
+        httpOk = statusCode >= 200 && statusCode < 400
+      } catch (e: unknown) {
+        error = `HTTPS: ${e instanceof Error ? e.message : String(e)}`
+      }
+    }
+
+    const latencyMs = Date.now() - t0
+    results.push({
+      name: t.name,
+      domain: t.domain,
+      ip,
+      dnsOk,
+      httpOk,
+      statusCode,
+      latencyMs,
+      error: error || undefined
+    })
+  }
+
+  emitLog(
+    'info',
+    'dns',
+    `Проверка доступности ИИ-сервисов: ${results.map((r) => `${r.name}=${r.httpOk ? 'OK' : r.statusCode || 'ERR'}`).join(', ')}`
+  )
+
+  return results
 }

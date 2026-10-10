@@ -399,6 +399,20 @@ export const dnsAiTestDoh = (
 ): Promise<{ ok: boolean; output: string; latencyMs: number }> =>
   invoke('dnsAi:testDoh', domain, qtype)
 
+export interface DnsAiServiceCheckResult {
+  name: string
+  domain: string
+  ip: string
+  dnsOk: boolean
+  httpOk: boolean
+  statusCode: number
+  latencyMs: number
+  error?: string
+}
+
+export const dnsAiCheckServices = (): Promise<DnsAiServiceCheckResult[]> =>
+  invoke('dnsAi:checkServices')
+
 // ---- Antigravity Unlocker ---------------------------------------------------
 export interface AgUnlockerSettings {
   client_patch: boolean
