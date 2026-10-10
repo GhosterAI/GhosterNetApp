@@ -8,36 +8,39 @@ export interface VpnPriorityContext {
 }
 
 const DETECT_VPN_PS = `
-$patterns = @('nekobox','nekoray','v2rayn','xray','xrayw','sing-box','singbox','clash','mihomo','hiddify','outline','wireguard','openvpn','amnezia','warp')
-$adapterPatterns = @('wintun','wireguard','openvpn','tap-','tap_windows','vpn','v2ray','xray','nekobox','nekoray','sing-box','clash','mihomo','tun')
+$vpnExes = @(
+  'nekobox.exe','nekoray.exe','v2rayn.exe','xray.exe','xrayw.exe',
+  'sing-box.exe','singbox.exe','clash.exe','clash-verge.exe','verge-mihomo.exe','mihomo.exe',
+  'hiddify.exe','hiddifynext.exe','outline.exe','wireguard.exe','openvpn.exe',
+  'amneziavpn.exe','amneziawg.exe','warp-svc.exe'
+)
+$adapterPatterns = @('wintun','wireguard','openvpn','tap-','tap_windows','nekobox','nekoray','sing-box','clash','mihomo','hiddify','amnezia')
 
 $procById = @{}
 $procNames = New-Object System.Collections.Generic.HashSet[string]
 Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | ForEach-Object {
+  if ([int]$_.ProcessId -eq $PID) { return }
   $name = ([string]$_.Name).ToLowerInvariant()
-  $path = ([string]$_.ExecutablePath).ToLowerInvariant()
-  $cmd = ([string]$_.CommandLine).ToLowerInvariant()
-  foreach ($pattern in $patterns) {
-    if ($name.Contains($pattern) -or $path.Contains($pattern) -or $cmd.Contains($pattern)) {
-      $procById[[int]$_.ProcessId] = $true
-      [void]$procNames.Add([string]$_.Name)
-      break
-    }
+  if ($vpnExes -contains $name) {
+    $procById[[int]$_.ProcessId] = $true
+    [void]$procNames.Add([string]$_.Name)
   }
 }
 
 $remoteIps = New-Object System.Collections.Generic.HashSet[string]
-Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue | ForEach-Object {
-  $pidVal = [int]$_.OwningProcess
-  if (-not $procById.ContainsKey($pidVal)) { return }
-  $ip = ([string]$_.RemoteAddress).Trim()
-  if (-not $ip) { return }
-  if ($ip -in @('127.0.0.1','0.0.0.0','::','::1')) { return }
-  [void]$remoteIps.Add($ip)
+if ($procById.Count -gt 0) {
+  Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue | ForEach-Object {
+    $pidVal = [int]$_.OwningProcess
+    if (-not $procById.ContainsKey($pidVal)) { return }
+    $ip = ([string]$_.RemoteAddress).Trim()
+    if (-not $ip) { return }
+    if ($ip -in @('127.0.0.1','0.0.0.0','::','::1') -or $ip.StartsWith('127.')) { return }
+    [void]$remoteIps.Add($ip)
+  }
 }
 
 $adapterIndexes = New-Object System.Collections.Generic.HashSet[int]
-Get-NetAdapter -ErrorAction SilentlyContinue | ForEach-Object {
+Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' } | ForEach-Object {
   $joined = (([string]$_.Name) + ' ' + ([string]$_.InterfaceDescription)).ToLowerInvariant()
   foreach ($pattern in $adapterPatterns) {
     if ($joined.Contains($pattern)) {

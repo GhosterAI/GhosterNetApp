@@ -475,7 +475,7 @@ export async function materializeZapretRuntime(overrideOpts?: {
  * Build a runtime batch wrapper `.ghosternet-run.bat` from the selected strategy `.bat`
  * that includes UDP port exclusions, VPN adapter/IP exclusions, and service `winwsArgs`.
  */
-async function buildRuntimeStrategyBatch(
+export async function buildRuntimeStrategyBatch(
   dir: string,
   strategyFile: string,
   z: ZapretConfig
@@ -500,6 +500,21 @@ async function buildRuntimeStrategyBatch(
 
   let content = readFileSync(srcBat, 'utf8')
   content = content.replace(/start\s+"[^"]*"\s+\/min\s+/gi, '')
+  content = content
+    .replace(/^\s*call\s+service\.bat\s+status_zapret\s*$/gim, 'rem status_zapret skipped')
+    .replace(/^\s*call\s+service\.bat\s+check_updates\s*$/gim, 'rem check_updates skipped')
+    .replace(/^\s*call\s+service\.bat\s+load_game_filter\s*$/gim, 'rem load_game_filter handled inline')
+
+  // Resolve %GameFilterTCP%, %GameFilterUDP%, and %GameFilter% directly before UDP port exclusion
+  const gameMode = z.gameFilterMode ?? (z.gameFilter ? 'tcpudp' : 'disabled')
+  const gameFilterTcp = gameMode === 'tcpudp' || gameMode === 'tcp' ? '1024-65535' : '12'
+  const gameFilterUdp = gameMode === 'tcpudp' || gameMode === 'udp' ? '1024-65535' : '12'
+  const gameFilterAll = gameMode !== 'disabled' ? '1024-65535' : '12'
+
+  content = content
+    .replace(/%GameFilterTCP%/gi, gameFilterTcp)
+    .replace(/%GameFilterUDP%/gi, gameFilterUdp)
+    .replace(/%GameFilter%/gi, gameFilterAll)
 
   // Collect extra winws.exe arguments from selected services (e.g. League of Legends TCP 2099)
   const extraTokens: string[] = []
@@ -513,8 +528,27 @@ async function buildRuntimeStrategyBatch(
     const rule = SERVICE_RULES[id]
     if (!rule?.winwsArgs?.length) continue
     for (const arg of rule.winwsArgs) {
-      const expanded = arg.replace(/\{lists\}/g, listsDir.replace(/\\/g, '\\'))
-      extraTokens.push(`"${expanded}"`)
+      if (arg.startsWith('--filter-tcp=')) {
+        const portPart = arg.slice('--filter-tcp='.length).trim()
+        if (/^\d+$/.test(portPart)) {
+          content = content.replace(
+            /(--wf-tcp=\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)/i,
+            `$1,${portPart}`
+          )
+        }
+      }
+      if (arg.includes('{lists}')) {
+        const eqIdx = arg.indexOf('=')
+        if (eqIdx > 0) {
+          const optName = arg.slice(0, eqIdx + 1)
+          const fileRel = arg.slice(eqIdx + 1).replace(/\{lists\}[\\/]?/g, '')
+          extraTokens.push(`${optName}"%LISTS%${fileRel}"`)
+        } else {
+          extraTokens.push(arg.replace(/\{lists\}[\\/]?/g, '%LISTS%'))
+        }
+      } else {
+        extraTokens.push(arg)
+      }
     }
   }
 
@@ -523,20 +557,14 @@ async function buildRuntimeStrategyBatch(
     try {
       const vpn = await detectVpnPriorityContext()
       if (vpn.remoteIps.length > 0) {
-        const vpnExcludeFile = path.join(listsDir, 'ipset-vpn-exclude.txt')
-        writeLines(vpnExcludeFile, vpn.remoteIps)
-        extraTokens.push(`"--ipset-exclude=${vpnExcludeFile}"`)
-      }
-      if (vpn.adapterIndexes.length > 0) {
-        const rawFilter = vpn.adapterIndexes
-          .map((idx) => `(ifIdx != ${idx} and subIfIdx != ${idx})`)
-          .join(' and ')
-        extraTokens.push(`"--wf-raw-part=(${rawFilter})"`)
+        const ipsetExcludePath = path.join(listsDir, 'ipset-exclude.txt')
+        const existingExclude = readLines(ipsetExcludePath)
+        writeLines(ipsetExcludePath, [...existingExclude, ...vpn.remoteIps])
       }
       if (vpn.detectedProcesses.length > 0) {
         log(
           'info',
-          `VPN Coexistence: обнаружен VPN (${vpn.detectedProcesses.join(', ')}), применены исключения маршрутов`
+          `VPN Coexistence: обнаружен VPN (${vpn.detectedProcesses.join(', ')}), исключено IP-маршрутов: ${vpn.remoteIps.length}`
         )
       }
     } catch {
@@ -544,14 +572,14 @@ async function buildRuntimeStrategyBatch(
     }
   }
 
-  // Apply UDP Exclude Ports (e.g. 51820 for WireGuard)
+  // Apply UDP Exclude Ports (e.g. 51820 for WireGuard) safely without consuming trailing commas
   if (z.udpExcludePorts && z.udpExcludePorts.trim()) {
     content = content
       .split(/\r?\n/)
       .map((line) => {
         if (line.includes('--wf-udp=') || line.includes('--filter-udp=')) {
           return line.replace(
-            /(--(?:wf|filter)-udp=)([0-9,\-]+)/g,
+            /(--(?:wf|filter)-udp=)(\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)/g,
             (_match, prefix: string, ports: string) => {
               const res = excludeUdpPortsFromCommand([`${prefix}${ports}`], z.udpExcludePorts!)
               return res[0] || `${prefix}${ports}`

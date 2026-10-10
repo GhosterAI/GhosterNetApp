@@ -4,6 +4,7 @@ import path from 'path'
 import { BrowserWindow } from 'electron'
 import { dataDir, zapretBundleDir } from '../utils/dirs'
 import {
+  buildRuntimeStrategyBatch,
   ensureWinDivertReady,
   getZapretStatus,
   isWinwsRunning,
@@ -388,19 +389,13 @@ export function runStrategyTests(): Promise<StrategyTestReport> {
             total,
             strategy: s.file
           })
-          const batPath = path.join(zapretBundleDir(), s.file)
-          if (!existsSync(batPath)) {
-            results[s.file] = {
-              tested: true,
-              passed: false,
-              okCount: 0,
-              totalCount: targets.length,
-              score: 0
-            }
-            continue
-          }
           try {
-            const r = await testOneStrategy(batPath, targets)
+            const runtimeBat = await buildRuntimeStrategyBatch(
+              zapretBundleDir(),
+              s.file,
+              (cfg?.zapret ?? {}) as ZapretConfig
+            )
+            const r = await testOneStrategy(runtimeBat, targets)
             results[s.file] = { tested: true, ...r }
             if (r.passed && r.score > bestScore) {
               bestScore = r.score
@@ -466,10 +461,6 @@ export async function runSettingsBenchmark(): Promise<SettingsBenchmarkReport> {
   const cfg = await getAppConfig()
   const strategies = await listStrategies()
   const activeStrategy = cfg.zapret?.activeStrategy || strategies[0]?.file || 'general.bat'
-  const batPath = path.join(zapretBundleDir(), activeStrategy)
-  if (!existsSync(batPath)) {
-    throw new Error(`Стратегия ${activeStrategy} не найдена`)
-  }
 
   const targets = await loadTestTargets()
   const wasRunning = getZapretStatus().state === 'running'
@@ -499,7 +490,13 @@ export async function runSettingsBenchmark(): Promise<SettingsBenchmarkReport> {
         ipsetMode: c.ipsetMode,
         gameFilterMode: c.gameFilterMode
       })
-      const r = await testOneStrategy(batPath, targets)
+      const runtimeBat = await buildRuntimeStrategyBatch(zapretBundleDir(), activeStrategy, {
+        ...(cfg.zapret as ZapretConfig),
+        ipsetMode: c.ipsetMode,
+        gameFilterMode: c.gameFilterMode,
+        gameFilter: c.gameFilterMode !== 'disabled'
+      })
+      const r = await testOneStrategy(runtimeBat, targets)
       combinations.push({
         ipsetMode: c.ipsetMode,
         gameFilterMode: c.gameFilterMode,
