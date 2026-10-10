@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // -----------------------------------------------------------------------------
-// Visual Studio F5 launcher for Slipgate (Electron + Vite).
+// Visual Studio F5 launcher for GhosterNet (Electron + Vite).
 //
 // Visual Studio's NTVS debugger can only launch a plain Node.js script.
 // Hitting F5 runs this launcher, which performs one-time bootstrap steps

@@ -48,7 +48,7 @@ export default function AppUpdateOverlay(): React.ReactElement | null {
     setError(null)
     try {
       await appInstallUpdate(info.assetUrl, info.latest)
-      // Main process will quit Slipgate within ~1 s. We just keep the
+      // Main process will quit GhosterNet within ~1 s. We just keep the
       // spinner up; user perceives "downloading… closing…".
     } catch (e) {
       setInstalling(false)
@@ -80,11 +80,6 @@ export default function AppUpdateOverlay(): React.ReactElement | null {
         WebkitBackdropFilter: 'blur(12px)'
       }}
     >
-      {/* Card uses the same theme tokens as the rest of the UI: bg-popover
-          and text-popover-foreground resolve to white-on-dark in dark mode
-          and dark-on-white in light mode automatically via next-themes.
-          No hard-coded green / white anywhere — the modal now blends with
-          whatever theme the user has picked under Settings. */}
       <div className="relative w-[min(560px,92vw)] rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl p-6 sm:p-8">
         <button
           type="button"
@@ -102,7 +97,7 @@ export default function AppUpdateOverlay(): React.ReactElement | null {
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-xl sm:text-2xl font-semibold leading-tight">
-              Доступно обновление Slipgate
+              Доступно обновление GhosterNet
             </div>
             <div className="mt-1 text-sm text-muted-foreground">
               Текущая версия: <span className="font-mono">v{info.installed}</span>
@@ -150,7 +145,7 @@ export default function AppUpdateOverlay(): React.ReactElement | null {
         </div>
 
         <div className="mt-3 text-[11px] text-muted-foreground leading-relaxed">
-          Slipgate закроется на 5–10 секунд для установки и запустится снова автоматически.
+          GhosterNet закроется на 5–10 секунд для установки и запустится снова автоматически.
           Все настройки и конфиги сохраняются.
         </div>
       </div>

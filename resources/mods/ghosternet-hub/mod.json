@@ -1,0 +1,8 @@
+{
+  "id": "ghosternet-hub",
+  "name": "GhosterNet Hub",
+  "version": "1.0.0",
+  "author": "GhosterAI",
+  "description": "Расширенный пакет стратегий (ALT7–12.2, EA, Minecraft), списков доменов/IP и бинарных пэйлоадов",
+  "source_url": "bundled://ghosternet-hub"
+}

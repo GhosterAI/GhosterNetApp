@@ -146,9 +146,8 @@ export async function checkTgwsUpdate(force = false): Promise<TgwsUpdateInfo> {
   }
 
   cache = { at: Date.now(), data: info }
-  // Persist to disk so the NEXT Slipgate launch can render the update
-  // banner instantly from cache instead of paying the 1–2 s GitHub fetch
-  // for the private CLI mirror repo.
+  // Persist to disk so the NEXT GhosterNet launch can render the update
+  // banner instantly from cache instead of paying the 1–2 s GitHub fetch.
   saveUpdateCache(CACHE_NAME, info)
   return info
 }

@@ -104,7 +104,6 @@ export async function disableAutoRun(): Promise<void> {
   if (is.dev) return
   clearLegacyRunEntry()
   await runSchtasks(['/Delete', '/F', '/TN', TASK_NAME])
-  await runSchtasks(['/Delete', '/F', '/TN', 'SlipgateAutoStart'])
 }
 
 export async function isAutoRun(): Promise<boolean> {

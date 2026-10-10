@@ -5,7 +5,7 @@ import { loadUpdateCache, saveUpdateCache } from '../utils/update-cache'
 const REPO = 'Flowseal/zapret-discord-youtube'
 const RELEASES_LATEST_URL = `https://api.github.com/repos/${REPO}/releases/latest`
 const REQUEST_HEADERS: Record<string, string> = {
-  'User-Agent': 'Slipgate-Updater',
+  'User-Agent': 'GhosterNet-Updater',
   Accept: 'application/vnd.github+json'
 }
 

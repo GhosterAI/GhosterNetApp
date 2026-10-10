@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Slipgate: Full F5 (install + prepare + dev)",
+      "name": "GhosterNet: Full F5 (install + prepare + dev)",
       "type": "node",
       "request": "launch",
       "cwd": "${workspaceRoot}",

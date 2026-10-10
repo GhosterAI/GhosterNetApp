@@ -22,9 +22,5 @@ latest.yml
 # PyInstaller intermediates
 .pyi-build/
 
-# Source reference directories
-Slipgate-main/
-Zapret-Zen-main/
-zapret-discord-youtube-main/
-tg-ws-proxy-main/
-
+# Local reference directories
+*-main/

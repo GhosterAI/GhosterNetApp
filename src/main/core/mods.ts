@@ -52,7 +52,7 @@ function scanModDirectory(dirPath: string, isBundled: boolean, enabledIds: Set<s
       : 'Пользовательский пакет стратегий и списков')
   ).trim()
   const version = (manifest.version || '1.0.0').trim()
-  const author = (manifest.author || (isBundled ? 'peshk0v' : 'User')).trim()
+  const author = (manifest.author || (isBundled ? 'GhosterAI' : 'User')).trim()
 
   const strategies: string[] = []
   try {

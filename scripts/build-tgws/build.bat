@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  Slipgate - rebuild TgWsProxy_windows.exe from Python source
+REM  GhosterNet - rebuild TgWsProxy_windows.exe from Python source
 REM ============================================================
 
 setlocal

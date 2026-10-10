@@ -20,9 +20,8 @@ const About: React.FC = () => {
           <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
               <span className="font-semibold text-foreground">GhosterNet</span> — универсальный
-              клиент для обхода сетевых ограничений DPI и ускорения Telegram на базе архитектуры{' '}
-              <span className="text-foreground font-medium">Slipgate</span> и полного набора
-              инструментов <span className="text-foreground font-medium">Zapret-Zen</span>.
+              клиент для обхода сетевых ограничений DPI и ускорения Telegram с полной поддержкой
+              системных служб, DNS/DoH, модов и пользовательских списков.
             </p>
             <p>Ключевые возможности приложения:</p>
             <ul className="list-disc pl-5 space-y-1.5">
@@ -39,9 +38,9 @@ const About: React.FC = () => {
                   Zapret DPI Bypass (v{BUNDLED_ZAPRET_VERSION})
                 </span>{' '}
                 — 20+ базовых стратегий обхода блокировок + встроенный мод{' '}
-                <code className="text-xs">unified-by-peshk0v (Hub)</code>, автоматическое
-                тестирование стратегий, автоподбор режимов IPset и Игрового фильтра, блокировка
-                QUIC и бесконфликтная работа совместно с VPN.
+                <code className="text-xs">GhosterNet Hub</code>, автоматическое тестирование
+                стратегий, автоподбор режимов IPset и Игрового фильтра, блокировка QUIC и
+                бесконфликтная работа совместно с VPN.
               </li>
               <li>
                 <span className="font-semibold text-foreground">Каталог сервисов и Hosts</span> —
@@ -87,17 +86,16 @@ const About: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Авторы и благодарности</CardTitle>
+            <CardTitle>Разработка</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1.5 text-sm">
             <p>
-              <span className="font-semibold text-foreground">GhosterAI</span> — сборка и
-              объединение функционала в <span className="font-medium">GhosterNet</span>
+              <span className="font-semibold text-foreground">GhosterAI</span> — разработка и
+              поддержка <span className="font-medium">GhosterNet</span>.
             </p>
             <p className="text-muted-foreground text-xs">
-              Основано на проектах <span className="text-foreground">Slipgate</span> (lazzy &amp;
-              cherry), <span className="text-foreground">Zapret-Zen</span> (peshk0v) и сборках{' '}
-              <span className="text-foreground">Flowseal</span> / <span className="text-foreground">bol-van</span>.
+              Встроенные сетевые ядра и списки: <span className="text-foreground">Flowseal</span> и{' '}
+              <span className="text-foreground">bol-van</span>.
             </p>
           </CardContent>
         </Card>

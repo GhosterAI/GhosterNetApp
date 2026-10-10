@@ -15,7 +15,6 @@
 
 !macro customUnInstall
   IfFileExists "$INSTDIR\.ghosternet-upgrade" ghosternet_skip_wipe 0
-  IfFileExists "$INSTDIR\.slipgate-upgrade" ghosternet_skip_wipe 0
 
   nsExec::ExecToLog 'taskkill /F /IM GhosterNet.exe /T'
   nsExec::ExecToLog 'taskkill /F /IM TgWsProxy_windows.exe /T'

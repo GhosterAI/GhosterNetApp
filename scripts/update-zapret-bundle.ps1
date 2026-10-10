@@ -27,7 +27,7 @@ Write-Host "Bundle written to: $dest"
 Get-ChildItem $dest | Format-Table Name,Length
 
 # Strip `start "zapret: %~n0" /min ` from every general*.bat so winws.exe
-# launches as a direct child of cmd.exe (which Slipgate spawns with
+# launches as a direct child of cmd.exe (which GhosterNet spawns with
 # windowsHide:true). Without this patch each bat would pop a visible
 # console window on every Zapret start AND on every strategy-test spawn.
 & (Join-Path $PSScriptRoot 'patch-zapret.ps1')

@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  Slipgate - dev launcher
+REM  GhosterNet - dev launcher
 REM  Starts electron-vite in dev mode (main + preload + renderer HMR).
 REM ============================================================
 
@@ -46,9 +46,9 @@ if exist "node_modules\.vite-electron" rmdir /s /q "node_modules\.vite-electron"
 
 echo.
 echo ============================================================
-echo  Starting Slipgate dev server
+echo  Starting GhosterNet dev server
 echo  Renderer: http://localhost:5173/
-echo  Data dir: %%APPDATA%%\slipgate-dev  (isolated from production builds)
+echo  Data dir: %%APPDATA%%\ghosternet-dev  (isolated from production builds)
 echo  Press Ctrl+C or close this window to stop.
 echo ============================================================
 echo.

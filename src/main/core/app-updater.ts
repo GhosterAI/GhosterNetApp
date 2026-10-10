@@ -242,13 +242,13 @@ export async function installAppUpdate(
   // Re-launch watcher. With `oneClick: false` (assisted installer) the
   // built-in `--updated` relaunch flag is unreliable when the installer
   // runs elevated, so we maintain our own watcher: poll the installer
-  // PID, wait for Slipgate.exe to settle, then start it.
+  // PID, wait for GhosterNet.exe to settle, then start it.
   if (installerPid) {
     try {
       const exePath = process.execPath
       const exeDir = path.dirname(exePath)
       const ts = Date.now()
-      const logPath = path.join(dir, `Slipgate-relaunch-${ts}.log`)
+      const logPath = path.join(dir, `GhosterNet-relaunch-${ts}.log`)
       const watcherScript = [
         "$ErrorActionPreference = 'SilentlyContinue'",
         `$installerPid = ${installerPid}`,
@@ -256,7 +256,7 @@ export async function installAppUpdate(
         `$exeDir = '${exeDir.replace(/'/g, "''")}'`,
         `$logPath = '${logPath.replace(/'/g, "''")}'`,
         // Diagnostic log — survives even if the relaunch fails so we
-        // can ask users to attach %TEMP%\Slipgate-relaunch-*.log when
+        // can ask users to attach %TEMP%\GhosterNet-relaunch-*.log when
         // a future bug report comes in.
         'function Log($m) {',
         "  try { Add-Content -LiteralPath $logPath -Value \"$([DateTime]::Now.ToString('HH:mm:ss.fff')) $m\" } catch {}",
@@ -269,7 +269,7 @@ export async function installAppUpdate(
         '  if (-not (Get-Process -Id $installerPid -ErrorAction SilentlyContinue)) { Log \"installer exited\"; break }',
         '  Start-Sleep -Milliseconds 500',
         '}',
-        // 2) Defender often holds the freshly-written Slipgate.exe for a
+        // 2) Defender often holds the freshly-written GhosterNet.exe for a
         //    few seconds for an on-write scan; 1s wasn't always enough.
         'Start-Sleep -Seconds 3',
         // 3) Wait until the new exe actually exists on disk.
@@ -295,7 +295,7 @@ export async function installAppUpdate(
         '  }',
         '}'
       ].join('\n')
-      const watcherPath = path.join(dir, `Slipgate-relaunch-${ts}.ps1`)
+      const watcherPath = path.join(dir, `GhosterNet-relaunch-${ts}.ps1`)
       // Prepend BOM so PowerShell reads the script as UTF-8 even on
       // legacy systems where the OEM code page would otherwise mangle
       // non-ASCII characters in install paths.
@@ -331,7 +331,7 @@ export async function installAppUpdate(
 
   // Give NSIS a beat to acquire the install lock, then quit. If we quit
   // synchronously the installer's "is target running?" probe sometimes
-  // races and shows a "close Slipgate" prompt despite /S.
+  // races and shows a "close GhosterNet" prompt despite /S.
   setTimeout(() => {
     try {
       app.quit()

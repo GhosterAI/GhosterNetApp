@@ -1,12 +1,12 @@
 @echo off
 REM ============================================================
-REM  Slipgate - production build script
+REM  GhosterNet - production build script
 REM
 REM  Pipeline (each step hard-fails on error so a broken build
 REM  can never silently ship):
 REM     1. Admin check (signtool + APPDATA wipe need elevation)
 REM     2. Tooling check (Node.js + pnpm)
-REM     3. Stop running Slipgate / proxy processes
+REM     3. Stop running GhosterNet / proxy processes
 REM     4. Clean dist + out (and optionally APPDATA via --clean)
 REM     5. Install dependencies (lockfile-safe)
 REM     6. Rebuild icons from SVG (build/icon.ico, resources/*, logo)
@@ -15,7 +15,7 @@ REM     8. electron-vite + electron-builder (Windows installer + 7z)
 REM     9. Verify artifacts
 REM
 REM  Flags:
-REM     --clean         wipe %APPDATA%\slipgate before building
+REM     --clean         wipe %APPDATA%\ghosternet before building
 REM     --skip-icons    skip the icons:rebuild step
 REM
 REM  Bat is written in a deliberately flat style: every step lives at
@@ -43,7 +43,7 @@ set "BUILD_START=%TIME%"
 
 echo.
 echo ============================================================
-echo  Slipgate production build
+echo  GhosterNet production build
 echo ============================================================
 
 REM === [1/9] Admin check =======================================
@@ -71,8 +71,8 @@ call pnpm -v
 
 REM === [3/9] Stop running processes ============================
 echo.
-echo === [3/9] Stopping any running Slipgate / proxy processes ===
-taskkill /F /IM Slipgate.exe         /T >nul 2>nul
+echo === [3/9] Stopping any running GhosterNet / proxy processes ===
+taskkill /F /IM GhosterNet.exe       /T >nul 2>nul
 taskkill /F /IM TgWsProxy_windows.exe /T >nul 2>nul
 taskkill /F /IM winws.exe            /T >nul 2>nul
 taskkill /F /IM elevate.exe          /T >nul 2>nul
@@ -97,18 +97,14 @@ echo OK: dist and out cleared
 if not "%DO_CLEAN%"=="1" goto skip_userdata_wipe
 echo.
 echo Wiping production userData and autostart entries (--clean) ...
-if exist "%APPDATA%\slipgate" rmdir /s /q "%APPDATA%\slipgate" >nul 2>nul
-if exist "%APPDATA%\Slipgate" rmdir /s /q "%APPDATA%\Slipgate" >nul 2>nul
-REM Leftovers from Flowseal's tray-GUI build of TgWsProxy. We now ship
-REM a headless CLI mirror via tenstepsbeforedecay/slipgate-tgws-cli, but
-REM if a user previously got the upstream tray exe through auto-update
-REM their %APPDATA%\TgWsProxy ends up holding a config.json with a
-REM stale secret/host (different from Slipgate's), which surfaces as
-REM weird Telegram bugs (e.g. drag-and-drop file uploads failing while
-REM text messages work). Wiping it on --clean guarantees a fresh test.
+if exist "%APPDATA%\ghosternet" rmdir /s /q "%APPDATA%\ghosternet" >nul 2>nul
+if exist "%APPDATA%\GhosterNet" rmdir /s /q "%APPDATA%\GhosterNet" >nul 2>nul
+REM Leftovers from Flowseal's tray-GUI build of TgWsProxy. We ship
+REM a headless CLI build via PyInstaller, and wiping %APPDATA%\TgWsProxy
+REM on --clean guarantees a fresh test without stale secret/host config.
 if exist "%APPDATA%\TgWsProxy" rmdir /s /q "%APPDATA%\TgWsProxy" >nul 2>nul
-schtasks /delete /tn "Slipgate Auto Start" /f >nul 2>nul
-schtasks /delete /tn "SlipgateAutoStart"   /f >nul 2>nul
+schtasks /delete /tn "GhosterNet Auto Start" /f >nul 2>nul
+schtasks /delete /tn "GhosterNetAutoStart"   /f >nul 2>nul
 echo OK: clean state restored
 :skip_userdata_wipe
 
@@ -159,9 +155,9 @@ REM === [9/9] Verify artifacts ==================================
 echo.
 echo === [9/9] Verifying artifacts ===
 set "ARTIFACTS_OK=1"
-if not exist "dist\win-unpacked\Slipgate.exe"   ( echo MISSING: dist\win-unpacked\Slipgate.exe   & set "ARTIFACTS_OK=0" )
-if not exist "dist\Slipgate_x64.exe"            ( echo MISSING: dist\Slipgate_x64.exe            & set "ARTIFACTS_OK=0" )
-if not exist "dist\Slipgate_x64-portable.7z"    ( echo MISSING: dist\Slipgate_x64-portable.7z    & set "ARTIFACTS_OK=0" )
+if not exist "dist\win-unpacked\GhosterNet.exe"   ( echo MISSING: dist\win-unpacked\GhosterNet.exe   & set "ARTIFACTS_OK=0" )
+if not exist "dist\GhosterNet_x64.exe"            ( echo MISSING: dist\GhosterNet_x64.exe            & set "ARTIFACTS_OK=0" )
+if not exist "dist\GhosterNet_x64-portable.7z"    ( echo MISSING: dist\GhosterNet_x64-portable.7z    & set "ARTIFACTS_OK=0" )
 if "%ARTIFACTS_OK%"=="0" goto err_artifacts
 echo OK: installer, portable archive, and unpacked tree present
 
@@ -234,7 +230,7 @@ exit /b 1
 :err_icons
 echo.
 echo ERROR: icons:rebuild failed. The build was aborted before
-echo        producing a Slipgate.exe with stale or wrong icons.
+echo        producing a GhosterNet.exe with stale or wrong icons.
 echo.
 pause
 exit /b 1

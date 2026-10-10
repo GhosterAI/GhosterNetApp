@@ -488,7 +488,7 @@ const NetworkPage: React.FC = () => {
               </div>
             ) : (
               mods.map((mod) => {
-                const isBundled = mod.id === 'unified-by-peshk0v' || Boolean(mod.bundled)
+                const isBundled = mod.id === 'ghosternet-hub' || Boolean(mod.bundled)
                 return (
                   <div
                     key={mod.id}
@@ -507,7 +507,7 @@ const NetworkPage: React.FC = () => {
                           <span className="text-xs text-muted-foreground">от {mod.author}</span>
                           {isBundled && (
                             <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                              Встроенный (Zapret-Zen Hub)
+                              Встроенный (GhosterNet Hub)
                             </span>
                           )}
                         </div>
