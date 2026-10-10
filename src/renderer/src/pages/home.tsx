@@ -14,11 +14,13 @@ import {
   tgwsStart, tgwsStop, tgwsRestart,
   zapretStart, zapretStop, zapretRestart,
   zapretCheckUpdate, tgwsCheckUpdate,
+  dnsAiCheckUpdate, agCheckUpdate,
   profilesSwitch,
   getAppVersion,
   dnsAiGetStatus,
   agGetStatus,
   type ZapretUpdateInfo, type TgwsUpdateInfo,
+  type DnsAiUpdateInfo, type AgUpdateInfo,
   type DnsAiStatus, type AgUnlockerStatus
 } from '@renderer/utils/ipc'
 import { Button } from '@renderer/components/ui/button'
@@ -244,15 +246,23 @@ const Home: React.FC = () => {
     }
   }
 
-  // ---- Update notices (Zapret + TgWsProxy)
+  // ---- Update notices (Zapret + TgWsProxy + DNS-AI + Antigravity)
   const [zapretUpdate, setZapretUpdate] = useState<ZapretUpdateInfo | null>(null)
   const [tgwsUpdate, setTgwsUpdate] = useState<TgwsUpdateInfo | null>(null)
+  const [dnsAiUpdate, setDnsAiUpdate] = useState<DnsAiUpdateInfo | null>(null)
+  const [agUpdate, setAgUpdate] = useState<AgUpdateInfo | null>(null)
   const [zapretSessionDismissed, setZapretSessionDismissed] = useState(false)
   const [tgwsSessionDismissed, setTgwsSessionDismissed] = useState(false)
+  const [dnsAiSessionDismissed, setDnsAiSessionDismissed] = useState(false)
+  const [agSessionDismissed, setAgSessionDismissed] = useState(false)
+
   useEffect(() => {
     zapretCheckUpdate(false).then(setZapretUpdate).catch(() => setZapretUpdate(null))
     tgwsCheckUpdate(false).then(setTgwsUpdate).catch(() => setTgwsUpdate(null))
+    dnsAiCheckUpdate(false).then(setDnsAiUpdate).catch(() => setDnsAiUpdate(null))
+    agCheckUpdate(false).then(setAgUpdate).catch(() => setAgUpdate(null))
   }, [])
+
   const showZapretBanner =
     !!zapretUpdate &&
     zapretUpdate.hasUpdate &&
@@ -265,6 +275,18 @@ const Home: React.FC = () => {
     !tgwsUpdate.dismissed &&
     !!tgwsUpdate.assetUrl &&
     !tgwsSessionDismissed
+  const showDnsAiBanner =
+    !!dnsAiUpdate &&
+    dnsAiUpdate.hasUpdate &&
+    !dnsAiUpdate.dismissed &&
+    !!dnsAiUpdate.assetUrl &&
+    !dnsAiSessionDismissed
+  const showAgBanner =
+    !!agUpdate &&
+    agUpdate.hasUpdate &&
+    !agUpdate.dismissed &&
+    !!agUpdate.assetUrl &&
+    !agSessionDismissed
 
   const toggleTgws = async (next: boolean): Promise<void> => {
     try {
@@ -342,7 +364,7 @@ const Home: React.FC = () => {
   return (
     <BasePage>
       <div className="relative flex flex-col h-full">
-        {(showZapretBanner || showTgwsBanner) && (
+        {(showZapretBanner || showTgwsBanner || showDnsAiBanner || showAgBanner) && (
           <div className="px-4 pt-2 space-y-2">
             {showZapretBanner && zapretUpdate && (
               <UpdateNotice
@@ -358,6 +380,22 @@ const Home: React.FC = () => {
                 subtitle={`Текущая версия: v${tgwsUpdate.installed ?? '?'}`}
                 onDetails={() => navigate('/telegram')}
                 onDismiss={() => setTgwsSessionDismissed(true)}
+              />
+            )}
+            {showDnsAiBanner && dnsAiUpdate && (
+              <UpdateNotice
+                title={`Доступно обновление DNS-AI — v${dnsAiUpdate.latest}`}
+                subtitle={`Текущая версия: v${dnsAiUpdate.installed ?? '?'}`}
+                onDetails={() => navigate('/network')}
+                onDismiss={() => setDnsAiSessionDismissed(true)}
+              />
+            )}
+            {showAgBanner && agUpdate && (
+              <UpdateNotice
+                title={`Доступно обновление Antigravity Unlocker — v${agUpdate.latest}`}
+                subtitle={`Текущая версия: v${agUpdate.installed ?? '?'}`}
+                onDetails={() => navigate('/antigravity')}
+                onDismiss={() => setAgSessionDismissed(true)}
               />
             )}
           </div>

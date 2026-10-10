@@ -1,5 +1,5 @@
 import { is } from '@electron-toolkit/utils'
-import { existsSync, mkdirSync } from 'fs'
+import { existsSync, mkdirSync, readdirSync } from 'fs'
 import { app } from 'electron'
 import path from 'path'
 
@@ -107,14 +107,50 @@ export function zapretBinaryPath(): string {
   return path.join(zapretBundleDir(), 'bin', 'winws.exe')
 }
 
+export function dnsAiRuntimeDir(): string {
+  return path.join(runtimeDir(), 'dns-ai')
+}
+
 export function dnsAiBinaryPath(): string {
+  const rt = path.join(dnsAiRuntimeDir(), 'DNS-AI.exe')
+  if (existsSync(rt)) return rt
   return path.join(resourcesDir(), 'dns-ai', 'DNS-AI.exe')
 }
 
 export function dnsAiEndpointsPath(): string {
+  const rt = path.join(dnsAiRuntimeDir(), 'endpoints.json')
+  if (existsSync(rt)) return rt
   return path.join(resourcesDir(), 'dns-ai', 'endpoints.json')
 }
 
+export function agUnlockerRuntimeDir(): string {
+  return path.join(runtimeDir(), 'ag-unlocker')
+}
+
 export function agUnlockerBinaryPath(): string {
+  const rt = agUnlockerRuntimeDir()
+  if (existsSync(rt)) {
+    try {
+      const list = readdirSync(rt).filter((f) => /^AG_.*\.exe$/i.test(f))
+      if (list.length > 0) {
+        list.sort().reverse()
+        return path.join(rt, list[0])
+      }
+    } catch {
+      // ignore
+    }
+  }
+  const bundledDir = path.join(resourcesDir(), 'ag-unlocker')
+  if (existsSync(bundledDir)) {
+    try {
+      const list = readdirSync(bundledDir).filter((f) => /^AG_.*\.exe$/i.test(f))
+      if (list.length > 0) {
+        list.sort().reverse()
+        return path.join(bundledDir, list[0])
+      }
+    } catch {
+      // ignore
+    }
+  }
   return path.join(resourcesDir(), 'ag-unlocker', 'AG_2.21.1.exe')
 }

@@ -413,6 +413,27 @@ export interface DnsAiServiceCheckResult {
 export const dnsAiCheckServices = (): Promise<DnsAiServiceCheckResult[]> =>
   invoke('dnsAi:checkServices')
 
+export interface DnsAiUpdateInfo {
+  installed?: string
+  latest?: string
+  hasUpdate: boolean
+  assetName?: string
+  assetUrl?: string
+  assetSize?: number
+  releaseUrl?: string
+  publishedAt?: string
+  dismissed?: boolean
+}
+export const dnsAiCheckUpdate = (force = false): Promise<DnsAiUpdateInfo> =>
+  invoke('dnsAi:checkUpdate', force)
+export const dnsAiInstallUpdate = (
+  url: string,
+  expectedVersion?: string
+): Promise<{ installedVersion?: string; sizeBytes: number }> =>
+  invoke('dnsAi:installUpdate', url, expectedVersion)
+export const dnsAiDismissUpdate = (tag: string): Promise<void> =>
+  invoke('dnsAi:dismissUpdate', tag)
+
 // ---- Antigravity Unlocker ---------------------------------------------------
 export interface AgUnlockerSettings {
   client_patch: boolean
@@ -534,6 +555,27 @@ export const agRemoveManualPath = (dirPath: string): Promise<AgUnlockerStatus> =
   invoke('ag:removeManualPath', dirPath)
 export const agGetLogs = (): Promise<{ forwarder: string; watchdog: string }> => invoke('ag:logs')
 export const agPickFolder = (): Promise<string | null> => invoke('ag:pickFolder')
+
+export interface AgUpdateInfo {
+  installed?: string
+  latest?: string
+  hasUpdate: boolean
+  assetName?: string
+  assetUrl?: string
+  assetSize?: number
+  releaseUrl?: string
+  publishedAt?: string
+  dismissed?: boolean
+}
+export const agCheckUpdate = (force = false): Promise<AgUpdateInfo> =>
+  invoke('ag:checkUpdate', force)
+export const agInstallUpdate = (
+  url: string,
+  expectedVersion?: string
+): Promise<{ installedVersion?: string; sizeBytes: number }> =>
+  invoke('ag:installUpdate', url, expectedVersion)
+export const agDismissUpdate = (tag: string): Promise<void> =>
+  invoke('ag:dismissUpdate', tag)
 
 // ---- App control ------------------------------------------------------------
 export const appQuit = (): Promise<void> => invoke('app:quit')

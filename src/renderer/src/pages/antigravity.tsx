@@ -20,7 +20,10 @@ import {
   Sparkles,
   Trash2,
   Wrench,
-  XCircle
+  XCircle,
+  Download,
+  ArrowUpCircle,
+  X
 } from 'lucide-react'
 import BasePage from '@renderer/components/base/base-page'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
@@ -45,6 +48,10 @@ import {
   agRemoveManualPath,
   agGetLogs,
   agPickFolder,
+  agCheckUpdate,
+  agInstallUpdate,
+  agDismissUpdate,
+  type AgUpdateInfo,
   writeClipboard,
   type AgUnlockerStatus
 } from '@renderer/utils/ipc'
@@ -63,6 +70,10 @@ const AntigravityPage: React.FC = () => {
   })
   const [activeLogTab, setActiveLogTab] = useState<'forwarder' | 'watchdog'>('forwarder')
   const [showLogs, setShowLogs] = useState(false)
+
+  const [agUpdate, setAgUpdate] = useState<AgUpdateInfo | null>(null)
+  const [agUpdating, setAgUpdating] = useState(false)
+  const [agUpdateDismissed, setAgUpdateDismissed] = useState(false)
 
   const loadStatus = async (deep = false): Promise<void> => {
     if (deep) setLoading(true)
@@ -91,11 +102,45 @@ const AntigravityPage: React.FC = () => {
 
   useEffect(() => {
     void loadStatus(true)
+    agCheckUpdate(false)
+      .then(setAgUpdate)
+      .catch(() => setAgUpdate(null))
     const timer = setInterval(() => {
       void loadStatus(false)
     }, 5000)
     return () => clearInterval(timer)
   }, [])
+
+  const handleInstallAgUpdate = async (): Promise<void> => {
+    if (!agUpdate?.assetUrl || agUpdating) return
+    setAgUpdating(true)
+    try {
+      const res = await agInstallUpdate(agUpdate.assetUrl, agUpdate.latest)
+      toast.success(
+        `Antigravity Unlocker обновлён до v${res.installedVersion ?? agUpdate.latest}!`,
+        {
+          description: `Размер: ${(res.sizeBytes / 1024 / 1024).toFixed(1)} МБ`,
+          style: POWER_ON_BANNER_STYLE
+        }
+      )
+      const fresh = await agCheckUpdate(true).catch(() => null)
+      setAgUpdate(fresh)
+      await loadStatus(true)
+    } catch (e) {
+      toast.error('Не удалось обновить Antigravity Unlocker', {
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setAgUpdating(false)
+    }
+  }
+
+  const handleDismissAgUpdate = (): void => {
+    setAgUpdateDismissed(true)
+    if (agUpdate?.latest) {
+      void agDismissUpdate(agUpdate.latest).catch(() => void 0)
+    }
+  }
 
   useEffect(() => {
     if (showLogs) {
@@ -344,6 +389,47 @@ const AntigravityPage: React.FC = () => {
   return (
     <BasePage title="Antigravity Unlocker">
       <div className="px-4 pb-6 space-y-4">
+        {agUpdate?.hasUpdate && !agUpdate.dismissed && !agUpdateDismissed && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 text-foreground shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="size-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                <ArrowUpCircle className="size-4" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold flex items-center gap-2">
+                  Доступно обновление Antigravity Unlocker — v{agUpdate.latest}
+                  <span className="text-xs font-mono text-muted-foreground">
+                    (текущая: v{agUpdate.installed ?? '2.21.1'})
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  Новый релиз confeden/Antigravity на GitHub. Обновите бинарник AG_*.exe в один клик.
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <Button
+                size="sm"
+                disabled={agUpdating || !agUpdate.assetUrl}
+                onClick={() => void handleInstallAgUpdate()}
+                className="h-8 gap-1.5 bg-amber-500 text-black hover:bg-amber-400 text-xs font-medium"
+              >
+                {agUpdating ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                <span>Обновить сейчас</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleDismissAgUpdate}
+                className="h-8 size-8 p-0 text-muted-foreground hover:text-foreground"
+                title="Скрыть"
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Hero / Master Control Card */}
         <Card className={cn(bypassActive && allPatched && 'border-emerald-500/40')}>
           <CardHeader className="space-y-2">

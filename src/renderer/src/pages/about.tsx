@@ -102,13 +102,29 @@ const About: React.FC = () => {
                 Flowseal/tg-ws-proxy
                 <ExternalLink className="h-3 w-3 opacity-70" />
               </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openUrl('https://github.com/confeden/DNS-AI')}
+              >
+                confeden/DNS-AI
+                <ExternalLink className="h-3 w-3 opacity-70" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openUrl('https://github.com/confeden/Antigravity')}
+              >
+                confeden/Antigravity
+                <ExternalLink className="h-3 w-3 opacity-70" />
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Разработка</CardTitle>
+            <CardTitle>Разработка и авторы</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1.5 text-sm">
             <p>
@@ -116,8 +132,9 @@ const About: React.FC = () => {
               поддержка <span className="font-medium">GhosterNet</span>.
             </p>
             <p className="text-muted-foreground text-xs">
-              Встроенные сетевые ядра и списки: <span className="text-foreground">Flowseal</span> и{' '}
-              <span className="text-foreground">bol-van</span>.
+              Встроенные сетевые компоненты: <span className="text-foreground">Flowseal</span> (Zapret, TgWsProxy),{' '}
+              <span className="text-foreground">confeden</span> (DNS-AI, Antigravity) и{' '}
+              <span className="text-foreground">bol-van</span> (zapret core).
             </p>
           </CardContent>
         </Card>

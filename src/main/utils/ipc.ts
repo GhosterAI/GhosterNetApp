@@ -89,6 +89,16 @@ import {
   dismissAppUpdate
 } from '../core/app-updater'
 import {
+  checkDnsAiUpdate,
+  installDnsAiUpdate,
+  dismissDnsAiUpdate
+} from '../core/dns-ai-updater'
+import {
+  checkAgUpdate,
+  installAgUpdate,
+  dismissAgUpdate
+} from '../core/ag-updater'
+import {
   getDnsAiStatus,
   enableDnsAi,
   disableDnsAi,
@@ -422,9 +432,19 @@ export function registerIpcMainHandlers(): void {
     )
   )
   ipcMain.handle('dnsAi:checkServices', h(() => checkDnsAiServices()))
+  ipcMain.handle('dnsAi:checkUpdate', h((force) => checkDnsAiUpdate(Boolean(force))))
+  ipcMain.handle('dnsAi:installUpdate', h((url, expectedVersion) =>
+    installDnsAiUpdate(url as string, expectedVersion as string | undefined)
+  ))
+  ipcMain.handle('dnsAi:dismissUpdate', h((tag) => dismissDnsAiUpdate(tag as string)))
 
   // ---- Antigravity Unlocker -----------------------------------------------
   ipcMain.handle('ag:status', h((deep) => getAgStatus(Boolean(deep))))
+  ipcMain.handle('ag:checkUpdate', h((force) => checkAgUpdate(Boolean(force))))
+  ipcMain.handle('ag:installUpdate', h((url, expectedVersion) =>
+    installAgUpdate(url as string, expectedVersion as string | undefined)
+  ))
+  ipcMain.handle('ag:dismissUpdate', h((tag) => dismissAgUpdate(tag as string)))
   ipcMain.handle('ag:patch', h((targetPath) => patchAgInstall(targetPath as string | undefined)))
   ipcMain.handle(
     'ag:unpatch',

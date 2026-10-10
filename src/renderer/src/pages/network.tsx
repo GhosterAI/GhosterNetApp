@@ -15,7 +15,10 @@ import {
   Stethoscope,
   Trash2,
   Wrench,
-  XCircle
+  XCircle,
+  Download,
+  ArrowUpCircle,
+  X
 } from 'lucide-react'
 import BasePage from '@renderer/components/base/base-page'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
@@ -38,6 +41,10 @@ import {
   dnsAiUninstallService,
   dnsAiTestDoh,
   dnsAiCheckServices,
+  dnsAiCheckUpdate,
+  dnsAiInstallUpdate,
+  dnsAiDismissUpdate,
+  type DnsAiUpdateInfo,
   modsList,
   modsToggle,
   modsRemove,
@@ -62,6 +69,9 @@ const NetworkPage: React.FC = () => {
   const [dohTesting, setDohTesting] = useState(false)
   const [aiChecks, setAiChecks] = useState<DnsAiServiceCheckResult[] | null>(null)
   const [aiChecking, setAiChecking] = useState(false)
+  const [dnsAiUpdate, setDnsAiUpdate] = useState<DnsAiUpdateInfo | null>(null)
+  const [dnsAiUpdating, setDnsAiUpdating] = useState(false)
+  const [dnsAiUpdateDismissed, setDnsAiUpdateDismissed] = useState(false)
 
   // DNS state
   const [presets, setPresets] = useState<DnsPresetDescriptor[]>([])
@@ -127,7 +137,38 @@ const NetworkPage: React.FC = () => {
     void refreshDns()
     void refreshMods()
     void runDiag()
+    dnsAiCheckUpdate(false)
+      .then(setDnsAiUpdate)
+      .catch(() => setDnsAiUpdate(null))
   }, [])
+
+  const handleInstallDnsAiUpdate = async (): Promise<void> => {
+    if (!dnsAiUpdate?.assetUrl || dnsAiUpdating) return
+    setDnsAiUpdating(true)
+    try {
+      const res = await dnsAiInstallUpdate(dnsAiUpdate.assetUrl, dnsAiUpdate.latest)
+      toast.success(`DNS-AI успешно обновлён до v${res.installedVersion ?? dnsAiUpdate.latest}!`, {
+        description: `Размер: ${(res.sizeBytes / 1024 / 1024).toFixed(1)} МБ`,
+        style: POWER_ON_BANNER_STYLE
+      })
+      const fresh = await dnsAiCheckUpdate(true).catch(() => null)
+      setDnsAiUpdate(fresh)
+      await refreshDnsAi()
+    } catch (e) {
+      toast.error('Не удалось обновить DNS-AI', {
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setDnsAiUpdating(false)
+    }
+  }
+
+  const handleDismissDnsAiUpdate = (): void => {
+    setDnsAiUpdateDismissed(true)
+    if (dnsAiUpdate?.latest) {
+      void dnsAiDismissUpdate(dnsAiUpdate.latest).catch(() => void 0)
+    }
+  }
 
   const handleToggleDnsAi = async (): Promise<void> => {
     if (dnsAiBusy) return
@@ -416,6 +457,47 @@ const NetworkPage: React.FC = () => {
   return (
     <BasePage title="Моды, DNS и Диагностика">
       <div className="px-4 pb-6 space-y-4">
+        {dnsAiUpdate?.hasUpdate && !dnsAiUpdate.dismissed && !dnsAiUpdateDismissed && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 text-foreground shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="size-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                <ArrowUpCircle className="size-4" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold flex items-center gap-2">
+                  Доступно обновление DNS-AI — v{dnsAiUpdate.latest}
+                  <span className="text-xs font-mono text-muted-foreground">
+                    (текущая: v{dnsAiUpdate.installed ?? '1.0.0'})
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  Новый релиз DNS-AI доступен на GitHub. Обновите бинарник службы в один клик.
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <Button
+                size="sm"
+                disabled={dnsAiUpdating || !dnsAiUpdate.assetUrl}
+                onClick={() => void handleInstallDnsAiUpdate()}
+                className="h-8 gap-1.5 bg-amber-500 text-black hover:bg-amber-400 text-xs font-medium"
+              >
+                {dnsAiUpdating ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                <span>Обновить сейчас</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleDismissDnsAiUpdate}
+                className="h-8 size-8 p-0 text-muted-foreground hover:text-foreground"
+                title="Скрыть"
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* DNS-AI Encrypted DoH Card */}
         <Card className={cn(dnsAi?.enabled && 'border-emerald-500/40')}>
           <CardHeader className="space-y-1">

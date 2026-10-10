@@ -15,6 +15,7 @@ import {
   profilesSave
 } from '@renderer/utils/ipc'
 import BasePage from '@renderer/components/base/base-page'
+import { UpdateCenterCard } from '@renderer/components/update-center-card'
 import { cn, POWER_ON_BANNER_STYLE } from '@renderer/lib/utils'
 
 const themes: AppTheme[] = ['dark', 'oled', 'night', 'light']
@@ -250,6 +251,8 @@ const Settings: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        <UpdateCenterCard />
 
         <Card>
           <CardHeader>

@@ -130,6 +130,18 @@ interface AppConfig {
   tgws?: TgwsConfig
   zapret?: ZapretConfig
   dns?: DnsConfig
+  dnsAi?: DnsAiConfig
+  agUnlocker?: AgUnlockerConfig
+}
+
+interface DnsAiConfig {
+  installedVersion?: string
+  dismissedUpdateTag?: string
+}
+
+interface AgUnlockerConfig {
+  installedVersion?: string
+  dismissedUpdateTag?: string
 }
 
 interface TgwsConfig {
