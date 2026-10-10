@@ -1,9 +1,9 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
+import { Worker } from 'node:worker_threads'
 import { dnsAiBinaryPath, dnsAiEndpointsPath } from '../utils/dirs'
 import { appLog } from '../utils/app-logger'
 
@@ -71,6 +71,8 @@ export interface DnsAiDohTestResult {
 }
 
 let consoleDaemon: ChildProcess | null = null
+let cachedSettings: Partial<DnsAiSettings> = {}
+let pipeQueue: Promise<unknown> = Promise.resolve()
 
 function defaultSettings(): DnsAiSettings {
   const buildNumber = Number(os.release().split('.')[2] || '0')
@@ -113,11 +115,12 @@ function getDnsAiDataDir(): string {
 
 function loadDiskSettings(): DnsAiSettings {
   const def = defaultSettings()
+  let base: DnsAiSettings = def
   try {
     const p = path.join(getDnsAiDataDir(), 'settings.json')
     if (existsSync(p)) {
       const parsed = JSON.parse(readFileSync(p, 'utf8'))
-      return {
+      base = {
         enabled: Boolean(parsed.enabled ?? def.enabled),
         mode: parsed.mode === 'native' ? 'native' : 'stub',
         ipv6: Boolean(parsed.ipv6 ?? def.ipv6),
@@ -129,7 +132,10 @@ function loadDiskSettings(): DnsAiSettings {
   } catch {
     // ignore
   }
-  return def
+  return {
+    ...base,
+    ...cachedSettings
+  }
 }
 
 function saveDiskSettings(settings: DnsAiSettings): void {
@@ -138,7 +144,7 @@ function saveDiskSettings(settings: DnsAiSettings): void {
     mkdirSync(dir, { recursive: true })
     writeFileSync(path.join(dir, 'settings.json'), JSON.stringify(settings, null, 2), 'utf8')
   } catch {
-    // ignore
+    // ignore (e.g. ProgramData ACL owned by SYSTEM/Administrators)
   }
 }
 
@@ -196,67 +202,165 @@ interface PipeReply {
   status?: DnsAiPipeStatus | null
 }
 
-function sendPipeRequest(payload: Record<string, unknown>, timeoutMs = 4000): Promise<PipeReply> {
+/**
+ * DNS-AI's Rust named-pipe server (`client/src/pipe.rs`) writes the single-line JSON reply
+ * and immediately calls `server.disconnect()` (`DisconnectNamedPipe`).
+ *
+ * Node's `net.createConnection` (libuv overlapped pipe) uses a 0-byte `ReadFile` readiness probe:
+ * when the server writes and immediately calls `DisconnectNamedPipe`, `DisconnectNamedPipe`
+ * discards the unread kernel pipe buffer before libuv's event loop issues the real `ReadFile`,
+ * causing `Error: read EPIPE`.
+ *
+ * Opening the pipe via synchronous `fs.openSync` + `fs.writeSync` + `fs.readSync` inside a
+ * worker thread issues a real 64 KB `ReadFile` immediately after `WriteFile` (matching DNS-AI's
+ * own `client/src/ipc_client.rs`), completely avoiding `read EPIPE`.
+ */
+const PIPE_WORKER_SCRIPT = [
+  "const { parentPort, workerData } = require('worker_threads');",
+  "const fs = require('fs');",
+  "function sleep(ms) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }",
+  "try {",
+  "  let fd = null, lastErr = null;",
+  "  for (let i = 0; i < 20; i++) {",
+  "    try {",
+  "      fd = fs.openSync(workerData.pipePath, 'r+');",
+  "      break;",
+  "    } catch (e) {",
+  "      lastErr = e;",
+  "      if (e && (e.errno === -4082 || e.code === 'EBUSY' || String(e.message).includes('busy'))) {",
+  "        sleep(50);",
+  "        continue;",
+  "      }",
+  "      throw e;",
+  "    }",
+  "  }",
+  "  if (fd === null) throw lastErr || new Error('Служба DNS-AI занята (pipe busy)');",
+  "  try {",
+  "    const req = Buffer.from(JSON.stringify(workerData.payload) + '\\n', 'utf8');",
+  "    fs.writeSync(fd, req);",
+  "    const buf = Buffer.alloc(65536);",
+  "    let out = '';",
+  "    while (true) {",
+  "      let n = 0;",
+  "      try {",
+  "        n = fs.readSync(fd, buf, 0, buf.length, null);",
+  "      } catch (re) {",
+  "        if (out.includes('\\n') || out.trim().startsWith('{')) break;",
+  "        throw re;",
+  "      }",
+  "      if (n <= 0) break;",
+  "      out += buf.slice(0, n).toString('utf8');",
+  "      if (out.includes('\\n')) break;",
+  "    }",
+  "    parentPort.postMessage({ ok: true, data: out.trim() });",
+  "  } finally {",
+  "    try { fs.closeSync(fd); } catch {}",
+  "  }",
+  "} catch (err) {",
+  "  parentPort.postMessage({",
+  "    ok: false,",
+  "    error: err && err.message ? err.message : String(err),",
+  "    code: err && err.code ? err.code : undefined",
+  "  });",
+  "}"
+].join('\n')
+
+function sendPipeRequestRaw(payload: Record<string, unknown>, timeoutMs = 6000): Promise<PipeReply> {
   return new Promise((resolve, reject) => {
     let settled = false
-    let buffer = ''
-    const client = net.createConnection(PIPE_PATH)
+    const worker = new Worker(PIPE_WORKER_SCRIPT, {
+      eval: true,
+      workerData: { pipePath: PIPE_PATH, payload }
+    })
 
     const timer = setTimeout(() => {
       if (settled) return
       settled = true
-      client.destroy()
+      void worker.terminate()
       reject(new Error('Тайм-аут обращения к службе DNS-AI (pipe)'))
     }, timeoutMs)
 
-    client.on('connect', () => {
-      client.write(JSON.stringify(payload) + '\n')
-    })
-
-    client.on('data', (chunk) => {
-      buffer += chunk.toString('utf8')
-      const nlIdx = buffer.indexOf('\n')
-      if (nlIdx !== -1 && !settled) {
-        settled = true
-        clearTimeout(timer)
-        const line = buffer.slice(0, nlIdx).trim()
-        client.end()
+    worker.on('message', (msg: { ok: boolean; data?: string; error?: string; code?: string }) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      if (msg.ok && msg.data) {
+        const line = msg.data.split('\n')[0].trim()
         try {
           resolve(JSON.parse(line) as PipeReply)
         } catch (err) {
           reject(err)
         }
+      } else {
+        const err = new Error(msg.error || 'Соединение с pipe службы DNS-AI закрыто без ответа') as Error & {
+          code?: string
+        }
+        err.code = msg.code
+        reject(err)
       }
     })
 
-    client.on('error', (err) => {
+    worker.on('error', (err) => {
       if (settled) return
       settled = true
       clearTimeout(timer)
       reject(err)
     })
 
-    client.on('close', () => {
+    worker.on('exit', (code) => {
       if (settled) return
       settled = true
       clearTimeout(timer)
-      if (buffer.trim()) {
-        try {
-          resolve(JSON.parse(buffer.trim()) as PipeReply)
-          return
-        } catch {
-          // fall through
-        }
-      }
-      reject(new Error('Соединение с pipe службы DNS-AI закрыто без ответа'))
+      reject(new Error(`Поток запроса к DNS-AI завершился с кодом ${code}`))
     })
   })
 }
 
-async function ensureDaemonReady(): Promise<void> {
+function sendPipeRequest(payload: Record<string, unknown>, timeoutMs = 6000): Promise<PipeReply> {
+  const next = pipeQueue.then(
+    () => sendPipeRequestRaw(payload, timeoutMs),
+    () => sendPipeRequestRaw(payload, timeoutMs)
+  )
+  pipeQueue = next.then(
+    () => undefined,
+    () => undefined
+  )
+  return next
+}
+
+async function buildSnapshotFromPipeStatus(st: DnsAiPipeStatus): Promise<DnsAiStatusSnapshot> {
+  const bin = dnsAiBinaryPath()
+  const svc = await queryServiceState()
+  const endpoints = readEndpoints()
+  const buildNumber = Number(os.release().split('.')[2] || '0')
+  const win11Native = process.platform === 'win32' && buildNumber >= 22000
+  cachedSettings = {
+    mode: st.settings.mode,
+    ipv6: st.settings.ipv6,
+    include_vpn_adapters: st.settings.include_vpn_adapters,
+    autostart_tray: st.settings.autostart_tray,
+    service_autostart: st.settings.service_autostart
+  }
+  return {
+    available: existsSync(bin),
+    binaryPath: bin,
+    daemonRunning: true,
+    serviceInstalled: svc.installed,
+    serviceRunning: svc.running,
+    enabled: st.enabled,
+    stubRunning: st.stub_running,
+    nativeSupported: st.native_supported ?? win11Native,
+    serviceVersion: st.service_version || '1.0.0',
+    settings: st.settings,
+    adapters: st.adapters || [],
+    endpoints
+  }
+}
+
+async function ensureDaemonReady(): Promise<DnsAiPipeStatus | null> {
   try {
-    const ping = await sendPipeRequest({ cmd: 'status' }, 1000)
-    if (ping.ok) return
+    const ping = await sendPipeRequest({ cmd: 'status' }, 2000)
+    if (ping.ok && ping.status) return ping.status
   } catch {
     // Not running yet; start service or console daemon
   }
@@ -294,16 +398,17 @@ async function ensureDaemonReady(): Promise<void> {
     }
   }
 
-  // Wait up to 4 seconds for pipe to accept connections
-  for (let i = 0; i < 16; i++) {
+  // Wait up to 5 seconds for pipe to accept connections
+  for (let i = 0; i < 20; i++) {
     await new Promise((r) => setTimeout(r, 250))
     try {
-      const check = await sendPipeRequest({ cmd: 'status' }, 1000)
-      if (check.ok) return
+      const check = await sendPipeRequest({ cmd: 'status' }, 2000)
+      if (check.ok && check.status) return check.status
     } catch {
       // retry
     }
   }
+  return null
 }
 
 export async function getDnsAiStatus(): Promise<DnsAiStatusSnapshot> {
@@ -316,23 +421,9 @@ export async function getDnsAiStatus(): Promise<DnsAiStatusSnapshot> {
 
   if (available) {
     try {
-      const reply = await sendPipeRequest({ cmd: 'status' }, 1500)
+      const reply = await sendPipeRequest({ cmd: 'status' }, 2500)
       if (reply.ok && reply.status) {
-        const st = reply.status
-        return {
-          available: true,
-          binaryPath: bin,
-          daemonRunning: true,
-          serviceInstalled: svc.installed,
-          serviceRunning: svc.running,
-          enabled: st.enabled,
-          stubRunning: st.stub_running,
-          nativeSupported: st.native_supported ?? win11Native,
-          serviceVersion: st.service_version || '1.0.0',
-          settings: st.settings,
-          adapters: st.adapters || [],
-          endpoints
-        }
+        return buildSnapshotFromPipeStatus(reply.status)
       }
     } catch {
       // Pipe not currently active
@@ -356,27 +447,76 @@ export async function getDnsAiStatus(): Promise<DnsAiStatusSnapshot> {
   }
 }
 
+async function syncCachedSettingsToDaemon(
+  currentStatus: DnsAiPipeStatus | null
+): Promise<DnsAiPipeStatus | null> {
+  if (!currentStatus || Object.keys(cachedSettings).length === 0) {
+    return currentStatus
+  }
+  const s = currentStatus.settings
+  const desired: DnsAiSettings = {
+    ...s,
+    ...cachedSettings
+  }
+  if (
+    desired.mode !== s.mode ||
+    desired.ipv6 !== s.ipv6 ||
+    desired.include_vpn_adapters !== s.include_vpn_adapters
+  ) {
+    const setReply = await sendPipeRequest({ cmd: 'set_settings', settings: desired }, 15000)
+    if (!setReply.ok) {
+      throw new Error(setReply.error || 'Не удалось применить настройки DNS-AI')
+    }
+    if (setReply.status) {
+      return setReply.status
+    }
+  }
+  return currentStatus
+}
+
 export async function enableDnsAi(): Promise<DnsAiStatusSnapshot> {
-  await ensureDaemonReady()
-  const reply = await sendPipeRequest({ cmd: 'enable' }, 10000)
+  const readyStatus = await ensureDaemonReady()
+  const currentStatus = await syncCachedSettingsToDaemon(readyStatus)
+
+  if (currentStatus?.enabled) {
+    emitLog(
+      'info',
+      'dns',
+      `Шифрованный DNS-AI включён (режим: ${currentStatus.settings.mode === 'native' ? 'Native DoH' : 'Stub 127.0.0.1:53'})`
+    )
+    return buildSnapshotFromPipeStatus(currentStatus)
+  }
+
+  const reply = await sendPipeRequest({ cmd: 'enable' }, 15000)
   if (!reply.ok) {
     throw new Error(reply.error || 'Не удалось включить защиту DNS-AI')
   }
-  emitLog('info', 'dns', `Шифрованный DNS-AI включён (режим: ${reply.status?.settings?.mode ?? 'stub'})`)
+  const activeMode = reply.status?.settings?.mode ?? 'stub'
+  emitLog(
+    'info',
+    'dns',
+    `Шифрованный DNS-AI включён (режим: ${activeMode === 'native' ? 'Native DoH' : 'Stub 127.0.0.1:53'})`
+  )
+  if (reply.status) {
+    return buildSnapshotFromPipeStatus(reply.status)
+  }
   return getDnsAiStatus()
 }
 
 export async function disableDnsAi(): Promise<DnsAiStatusSnapshot> {
   try {
-    const reply = await sendPipeRequest({ cmd: 'disable' }, 8000)
+    const reply = await sendPipeRequest({ cmd: 'disable' }, 12000)
     if (!reply.ok && reply.error) {
       throw new Error(reply.error)
     }
     emitLog('info', 'dns', 'Шифрованный DNS-AI отключён, настройки адаптеров восстановлены')
+    if (reply.status) {
+      return buildSnapshotFromPipeStatus(reply.status)
+    }
   } catch (e) {
-    // If pipe wasn't running, ensure settings.enabled is false on disk
     const cur = loadDiskSettings()
     cur.enabled = false
+    cachedSettings.enabled = false
     saveDiskSettings(cur)
     emitLog('warn', 'dns', `Отключение DNS-AI: ${e instanceof Error ? e.message : String(e)}`)
   }
@@ -384,21 +524,40 @@ export async function disableDnsAi(): Promise<DnsAiStatusSnapshot> {
 }
 
 export async function setDnsAiSettings(partial: Partial<DnsAiSettings>): Promise<DnsAiStatusSnapshot> {
-  const current = (await getDnsAiStatus()).settings
+  const statusSnap = await getDnsAiStatus()
   const next: DnsAiSettings = {
-    ...current,
+    ...statusSnap.settings,
+    ...partial
+  }
+  cachedSettings = {
+    ...cachedSettings,
     ...partial
   }
   saveDiskSettings(next)
 
-  try {
-    const reply = await sendPipeRequest({ cmd: 'set_settings', settings: next }, 8000)
+  if (statusSnap.daemonRunning) {
+    const reply = await sendPipeRequest({ cmd: 'set_settings', settings: next }, 15000)
     if (!reply.ok && reply.error) {
       throw new Error(reply.error)
     }
-    emitLog('info', 'dns', `Обновлены настройки DNS-AI (mode=${next.mode}, ipv6=${next.ipv6}, vpn=${next.include_vpn_adapters})`)
-  } catch {
-    // Saved to disk; will take effect when enabled
+    emitLog(
+      'info',
+      'dns',
+      `Обновлены настройки DNS-AI (mode=${next.mode}, ipv6=${next.ipv6}, vpn=${next.include_vpn_adapters})`
+    )
+    if (reply.status) {
+      return buildSnapshotFromPipeStatus(reply.status)
+    }
+  } else {
+    emitLog(
+      'info',
+      'dns',
+      `Сохранены настройки DNS-AI (mode=${next.mode}, ipv6=${next.ipv6}, vpn=${next.include_vpn_adapters})`
+    )
+    return {
+      ...statusSnap,
+      settings: next
+    }
   }
   return getDnsAiStatus()
 }
@@ -410,6 +569,11 @@ export async function installDnsAiService(): Promise<DnsAiStatusSnapshot> {
   }
   await execFileAsync(bin, ['install'], { windowsHide: true, timeout: 15000 })
   emitLog('info', 'dns', 'Служба DnsAiClient установлена и запущена')
+  const readyStatus = await ensureDaemonReady()
+  const synced = await syncCachedSettingsToDaemon(readyStatus)
+  if (synced) {
+    return buildSnapshotFromPipeStatus(synced)
+  }
   return getDnsAiStatus()
 }
 
@@ -421,6 +585,11 @@ export async function uninstallDnsAiService(): Promise<DnsAiStatusSnapshot> {
   if (consoleDaemon && !consoleDaemon.killed) {
     consoleDaemon.kill()
     consoleDaemon = null
+  }
+  try {
+    await sendPipeRequest({ cmd: 'disable' }, 8000)
+  } catch {
+    // ignore if pipe not running
   }
   await execFileAsync(bin, ['uninstall'], { windowsHide: true, timeout: 15000 })
   emitLog('info', 'dns', 'Служба DnsAiClient удалена и настройки DNS восстановлены')
