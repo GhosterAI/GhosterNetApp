@@ -77,6 +77,17 @@ export const tgwsInstallUpdate = (
 export const tgwsDismissUpdate = (tag: string): Promise<void> =>
   invoke('tgws:dismissUpdate', tag)
 
+export interface TelegramDcBenchmark {
+  id: number
+  name: string
+  location: string
+  ip: string
+  latencyMs: number
+  ok: boolean
+  recommended: boolean
+}
+export const tgwsPingDcs = (): Promise<TelegramDcBenchmark[]> => invoke('tgws:pingDcs')
+
 // ---- Zapret -----------------------------------------------------------------
 export interface StrategyDescriptor {
   file: string
@@ -300,7 +311,27 @@ export const diagnosticsClearDiscordCache = (): Promise<{
   freedMb: number
 }> => invoke('diagnostics:clearDiscordCache')
 
-// ---- Profiles ---------------------------------------------------------------
+export interface AutoFixReport {
+  ok: boolean
+  actions: string[]
+  discordFreedMb: number
+}
+
+export interface LiveServiceStatus {
+  id: string
+  name: string
+  category: 'media' | 'social' | 'ai'
+  target: string
+  ok: boolean
+  latencyMs: number
+  statusText: string
+}
+
+export const diagnosticsAutoFix = (): Promise<AutoFixReport> => invoke('diagnostics:autoFix')
+export const diagnosticsLiveServices = (): Promise<LiveServiceStatus[]> =>
+  invoke('diagnostics:liveServices')
+
+// ---- Profiles & Config Backup -----------------------------------------------
 export const profilesList = (): Promise<{
   activeProfileId: string
   profiles: ConfigProfile[]
@@ -322,6 +353,16 @@ export const profilesDelete = (
   profileId: string
 ): Promise<{ activeProfileId: string; profiles: ConfigProfile[] }> =>
   invoke('profiles:delete', profileId)
+
+export const configExportFull = (): Promise<string> => invoke('config:exportFull')
+export const configImportFull = (
+  raw: string
+): Promise<{ ok: boolean; activeProfileId?: string; message: string }> =>
+  invoke('config:importFull', raw)
+export const configExportDialog = (): Promise<{ saved: boolean; path?: string }> =>
+  invoke('config:exportDialog')
+export const configImportDialog = (): Promise<{ ok: boolean; activeProfileId?: string; message: string }> =>
+  invoke('config:importDialog')
 
 // ---- GhosterNet self-update -------------------------------------------------
 export interface AppUpdateInfo {

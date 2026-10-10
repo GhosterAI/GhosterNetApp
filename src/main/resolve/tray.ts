@@ -12,6 +12,13 @@ import {
 } from '../core/zapret'
 import { listProfiles, switchProfile } from '../core/profiles'
 import { getAppConfig, patchAppConfig } from '../config'
+import { getDnsAiStatus, enableDnsAi, disableDnsAi } from '../core/dns-ai'
+import { getAgStatus, enableAgAll, disableAgAll } from '../core/ag-unlocker'
+import { checkAppUpdate } from '../core/app-updater'
+import { checkZapretUpdate } from '../core/zapret-updater'
+import { checkTgwsUpdate } from '../core/tgws-updater'
+import { checkDnsAiUpdate } from '../core/dns-ai-updater'
+import { checkAgUpdate } from '../core/ag-updater'
 import { appLog } from '../utils/app-logger'
 
 let tray: Tray | null = null
@@ -75,10 +82,28 @@ export async function createTray(): Promise<void> {
     const profileData = await listProfiles().catch(() => ({ activeProfileId: 'default', profiles: [] }))
 
     const anyRunning = tgws.state === 'running' || zapret.state === 'running'
-    if (anyRunning !== currentIconOn) {
-      tray.setImage(loadTrayImage(anyRunning))
-      currentIconOn = anyRunning
+    const dnsAi = await getDnsAiStatus().catch(() => null)
+    const ag = await getAgStatus(false).catch(() => null)
+
+    const dnsAiRunning = Boolean(dnsAi?.enabled || dnsAi?.stubRunning)
+    const agRunning = Boolean(ag && (ag.relayRunning || ag.nrptApplied || ag.proxyEnvSet))
+
+    const activeNow = anyRunning || dnsAiRunning || agRunning
+    if (activeNow !== currentIconOn) {
+      tray.setImage(loadTrayImage(activeNow))
+      currentIconOn = activeNow
     }
+
+    const activeModules: string[] = []
+    if (zapret.state === 'running') activeModules.push('Zapret')
+    if (tgws.state === 'running') activeModules.push('Telegram')
+    if (dnsAiRunning) activeModules.push('DNS-AI')
+    if (agRunning) activeModules.push('Antigravity')
+
+    const tooltip = activeModules.length > 0
+      ? `GhosterNet — Защита активна (${activeModules.join(', ')})`
+      : 'GhosterNet — Защита отключена'
+    tray.setToolTip(tooltip)
 
     const activeStrat = cfg?.zapret?.activeStrategy
     const stratItems: Electron.MenuItemConstructorOptions[] = strategies.slice(0, 12).map((s) => ({
@@ -168,6 +193,48 @@ export async function createTray(): Promise<void> {
           }
         ]
       },
+      {
+        label: `DNS-AI (DoH): ${dnsAiRunning ? 'Активен' : 'Отключён'}`,
+        submenu: [
+          {
+            label: 'Включить DNS-AI',
+            enabled: !dnsAiRunning,
+            click: async () => {
+              await enableDnsAi().catch(() => void 0)
+              await rebuild()
+            }
+          },
+          {
+            label: 'Отключить DNS-AI',
+            enabled: dnsAiRunning,
+            click: async () => {
+              await disableDnsAi().catch(() => void 0)
+              await rebuild()
+            }
+          }
+        ]
+      },
+      {
+        label: `Antigravity Unlocker: ${agRunning ? 'Активен' : 'Отключён'}`,
+        submenu: [
+          {
+            label: 'Включить защиту',
+            enabled: !agRunning,
+            click: async () => {
+              await enableAgAll().catch(() => void 0)
+              await rebuild()
+            }
+          },
+          {
+            label: 'Отключить защиту',
+            enabled: agRunning,
+            click: async () => {
+              await disableAgAll().catch(() => void 0)
+              await rebuild()
+            }
+          }
+        ]
+      },
       ...(profileItems.length > 0
         ? [
             {
@@ -176,6 +243,24 @@ export async function createTray(): Promise<void> {
             }
           ]
         : []),
+      { type: 'separator' },
+      {
+        label: 'Проверить все обновления',
+        click: async () => {
+          try {
+            await Promise.allSettled([
+              checkAppUpdate(true),
+              checkZapretUpdate(true),
+              checkTgwsUpdate(true),
+              checkDnsAiUpdate(true),
+              checkAgUpdate(true)
+            ])
+            appLog('info', 'Трей: проверка обновлений всех компонентов выполнена')
+          } catch {
+            // ignore
+          }
+        }
+      },
       { type: 'separator' },
       { label: 'Выйти из GhosterNet', click: () => { app.quit() } }
     ])

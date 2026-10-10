@@ -365,3 +365,72 @@ export async function getTgwsLink(): Promise<string> {
   }
   return `tg://proxy?server=${encodeURIComponent(t.host)}&port=${t.port}&secret=${encodeURIComponent(fullSecret)}`
 }
+
+export interface TelegramDcBenchmark {
+  id: number
+  name: string
+  location: string
+  ip: string
+  latencyMs: number
+  ok: boolean
+  recommended: boolean
+}
+
+export async function pingTelegramDatacenters(): Promise<TelegramDcBenchmark[]> {
+  const dcs = [
+    { id: 1, name: 'DC1', location: 'Майами (США)', ip: '149.154.175.50' },
+    { id: 2, name: 'DC2', location: 'Амстердам (Европа)', ip: '149.154.167.220' },
+    { id: 3, name: 'DC3', location: 'Майами (США)', ip: '149.154.175.100' },
+    { id: 4, name: 'DC4', location: 'Амстердам (Европа)', ip: '149.154.167.220' },
+    { id: 5, name: 'DC5', location: 'Сингапур (Азия)', ip: '91.108.56.165' }
+  ]
+
+  const pingOne = (ip: string, timeoutMs = 2500): Promise<{ ok: boolean; latencyMs: number }> => {
+    return new Promise((resolve) => {
+      const t0 = Date.now()
+      const sock = createConnection({ host: ip, port: 443 })
+      let settled = false
+
+      const finish = (ok: boolean) => {
+        if (settled) return
+        settled = true
+        sock.destroy()
+        resolve({ ok, latencyMs: Date.now() - t0 })
+      }
+
+      sock.setTimeout(timeoutMs)
+      sock.once('connect', () => finish(true))
+      sock.once('timeout', () => finish(false))
+      sock.once('error', () => finish(false))
+    })
+  }
+
+  const results = await Promise.all(
+    dcs.map(async (dc) => {
+      const res = await pingOne(dc.ip)
+      return {
+        id: dc.id,
+        name: dc.name,
+        location: dc.location,
+        ip: dc.ip,
+        latencyMs: res.latencyMs,
+        ok: res.ok,
+        recommended: false
+      }
+    })
+  )
+
+  let bestId = 2
+  let minLatency = 99999
+  for (const r of results) {
+    if (r.ok && r.latencyMs < minLatency) {
+      minLatency = r.latencyMs
+      bestId = r.id
+    }
+  }
+
+  return results.map((r) => ({
+    ...r,
+    recommended: r.id === bestId
+  }))
+}

@@ -12,8 +12,10 @@ import {
   tgwsCheckUpdate,
   tgwsInstallUpdate,
   tgwsDismissUpdate,
+  tgwsPingDcs,
   type TgwsUpdateInfo,
-  type TgwsTuneReport
+  type TgwsTuneReport,
+  type TelegramDcBenchmark
 } from '@renderer/utils/ipc'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { Button } from '@renderer/components/ui/button'
@@ -30,7 +32,9 @@ import {
   Sparkles,
   Wand2,
   Gauge,
-  CheckCircle2
+  CheckCircle2,
+  Globe,
+  RefreshCw
 } from 'lucide-react'
 import TelegramIcon from '@renderer/components/telegram-icon'
 import ReloadTgwsIcon from '@renderer/components/reload-tgws-icon'
@@ -89,6 +93,30 @@ const TelegramPage: React.FC = () => {
   const [updateInfo, setUpdateInfo] = useState<TgwsUpdateInfo | null>(null)
   const [installing, setInstalling] = useState(false)
   const installingRef = useRef(false)
+
+  // ---- DC Ping Benchmark
+  const [dcBenchmarks, setDcBenchmarks] = useState<TelegramDcBenchmark[] | null>(null)
+  const [benchmarkingDcs, setBenchmarkingDcs] = useState(false)
+
+  const handlePingDcs = async (): Promise<void> => {
+    if (benchmarkingDcs) return
+    setBenchmarkingDcs(true)
+    try {
+      const results = await tgwsPingDcs()
+      setDcBenchmarks(results)
+      toast.success('Тест датацентров Telegram завершён', { style: POWER_ON_TOAST_STYLE })
+    } catch (e) {
+      toast.error('Не удалось измерить задержку до датацентров Telegram', {
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setBenchmarkingDcs(false)
+    }
+  }
+
+  useEffect(() => {
+    tgwsPingDcs().then(setDcBenchmarks).catch(() => void 0)
+  }, [])
 
   useEffect(() => {
     tgwsCheckUpdate(false).then(setUpdateInfo).catch(() => setUpdateInfo(null))
@@ -316,6 +344,81 @@ const TelegramPage: React.FC = () => {
               <ExternalLink className="size-3.5 translate-y-px" />
               <span>для автоматического подключения.</span>
             </p>
+          </CardContent>
+        </Card>
+
+        {/* Telegram DC Ping Benchmark Card */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-sky-400" />
+                Спидтест датацентров Telegram (DC Ping & Benchmark)
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Измерение задержки ко всем 5 ключевым датацентрам Telegram (DC1–DC5) и авто-рекомендация наилучшего DC для медиа.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void handlePingDcs()}
+              disabled={benchmarkingDcs}
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', benchmarkingDcs && 'animate-spin')} />
+              Запустить тест DC
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+              {(dcBenchmarks ?? [
+                { id: 1, name: 'DC1', location: 'Майами (США)', ip: '149.154.175.50', latencyMs: 0, ok: false, recommended: false },
+                { id: 2, name: 'DC2', location: 'Амстердам (Европа)', ip: '149.154.167.220', latencyMs: 0, ok: false, recommended: true },
+                { id: 3, name: 'DC3', location: 'Майами (США)', ip: '149.154.175.100', latencyMs: 0, ok: false, recommended: false },
+                { id: 4, name: 'DC4', location: 'Амстердам (Европа)', ip: '149.154.167.220', latencyMs: 0, ok: false, recommended: false },
+                { id: 5, name: 'DC5', location: 'Сингапур (Азия)', ip: '91.108.56.165', latencyMs: 0, ok: false, recommended: false }
+              ]).map((dc) => (
+                <div
+                  key={dc.id}
+                  className={cn(
+                    'relative rounded-lg border p-3 flex flex-col justify-between transition-all',
+                    dc.recommended && dcBenchmarks
+                      ? 'border-emerald-500/60 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                      : 'border-border bg-card/40'
+                  )}
+                >
+                  {dc.recommended && dcBenchmarks && (
+                    <div className="absolute -top-2.5 right-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500 text-black shadow-sm">
+                      ЛУЧШИЙ DC
+                    </div>
+                  )}
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-foreground">{dc.name}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground">{dc.ip}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{dc.location}</div>
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground">Пинг:</span>
+                    <span
+                      className={cn(
+                        'font-mono text-xs font-semibold px-2 py-0.5 rounded',
+                        dcBenchmarks
+                          ? dc.ok
+                            ? dc.latencyMs < 90
+                              ? 'text-emerald-400 bg-emerald-500/10'
+                              : 'text-amber-400 bg-amber-500/10'
+                            : 'text-red-400 bg-red-500/10'
+                          : 'text-muted-foreground'
+                      )}
+                    >
+                      {dcBenchmarks ? (dc.ok ? `${dc.latencyMs} мс` : 'Блок') : '—'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 

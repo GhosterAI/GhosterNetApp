@@ -18,7 +18,9 @@ import {
   XCircle,
   Download,
   ArrowUpCircle,
-  X
+  X,
+  Activity,
+  Check
 } from 'lucide-react'
 import BasePage from '@renderer/components/base/base-page'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
@@ -52,6 +54,10 @@ import {
   diagnosticsRun,
   diagnosticsFix,
   diagnosticsClearDiscordCache,
+  diagnosticsAutoFix,
+  diagnosticsLiveServices,
+  type AutoFixReport,
+  type LiveServiceStatus,
   type DnsPresetDescriptor,
   type DnsManagerStatus,
   type DnsAiStatus,
@@ -88,6 +94,10 @@ const NetworkPage: React.FC = () => {
   const [diagLoading, setDiagLoading] = useState(false)
   const [fixingId, setFixingId] = useState<string | null>(null)
   const [clearingDiscord, setClearingDiscord] = useState(false)
+  const [autoFixing, setAutoFixing] = useState(false)
+  const [autoFixReport, setAutoFixReport] = useState<AutoFixReport | null>(null)
+  const [liveServices, setLiveServices] = useState<LiveServiceStatus[] | null>(null)
+  const [liveChecking, setLiveChecking] = useState(false)
 
   const refreshDnsAi = async (): Promise<void> => {
     try {
@@ -132,11 +142,25 @@ const NetworkPage: React.FC = () => {
     }
   }
 
+  const runCheckLiveServices = async (): Promise<void> => {
+    if (liveChecking) return
+    setLiveChecking(true)
+    try {
+      const list = await diagnosticsLiveServices()
+      setLiveServices(list)
+    } catch {
+      // ignore
+    } finally {
+      setLiveChecking(false)
+    }
+  }
+
   useEffect(() => {
     void refreshDnsAi()
     void refreshDns()
     void refreshMods()
     void runDiag()
+    void runCheckLiveServices()
     dnsAiCheckUpdate(false)
       .then(setDnsAiUpdate)
       .catch(() => setDnsAiUpdate(null))
@@ -449,6 +473,31 @@ const NetworkPage: React.FC = () => {
       })
     } finally {
       setClearingDiscord(false)
+    }
+  }
+
+  const handleAutoFix = async (): Promise<void> => {
+    if (autoFixing) return
+    setAutoFixing(true)
+    const tId = toast.loading('Доктор сети: комплексное устранение неполадок…')
+    try {
+      const rep = await diagnosticsAutoFix()
+      setAutoFixReport(rep)
+      toast.success(
+        `Сеть успешно восстановлена! (${rep.actions.length} действий${
+          rep.discordFreedMb > 0 ? `, кэш Discord: ${rep.discordFreedMb} МБ` : ''
+        })`,
+        { id: tId, style: POWER_ON_BANNER_STYLE }
+      )
+      await runDiag()
+      await runCheckLiveServices()
+    } catch (e) {
+      toast.error('Не удалось автоматически восстановить сеть', {
+        id: tId,
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setAutoFixing(false)
     }
   }
 
@@ -1072,20 +1121,106 @@ const NetworkPage: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Live Services Monitor Card */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-emerald-400" />
+                Live-проверка доступности сервисов
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Мониторинг задержки и доступности ключевых сервисов (YouTube 4K, Discord Gateway/Voice, Telegram DC, Gemini, ChatGPT, Claude) в реальном времени.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void runCheckLiveServices()}
+              disabled={liveChecking}
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', liveChecking && 'animate-spin')} />
+              Проверить пинг
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {liveServices && liveServices.length > 0 ? (
+                liveServices.map((svc) => (
+                  <div
+                    key={svc.id}
+                    className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-card/40"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-semibold truncate text-foreground flex items-center gap-1.5">
+                        <span
+                          className={`size-2 rounded-full ${
+                            svc.ok ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'
+                          }`}
+                        />
+                        {svc.name}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground truncate font-mono mt-0.5">
+                        {svc.statusText}
+                      </div>
+                    </div>
+                    <span
+                      className={`text-xs font-mono font-medium px-2 py-0.5 rounded border ml-2 shrink-0 ${
+                        svc.ok
+                          ? svc.latencyMs < 100
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                          : 'bg-red-500/10 text-red-400 border-red-500/30'
+                      }`}
+                    >
+                      {svc.ok ? `${svc.latencyMs} мс` : 'Блок'}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full py-4 text-center text-xs text-muted-foreground">
+                  {liveChecking ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="size-4 animate-spin text-primary" />
+                      Измерение пинга до сервисов…
+                    </span>
+                  ) : (
+                    'Нажмите «Проверить пинг» для замера задержки сервисов'
+                  )}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* System Diagnostics & Tools Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Stethoscope className="h-4 w-4 text-muted-foreground" />
-                Диагностика системы и инструменты
+                Диагностика системы и «Доктор сети»
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
                 Автоматическая проверка служб Windows, драйвера WinDivert, TCP Timestamps,
-                конфликтующих процессов и соединения с GitHub.
+                конфликтующих процессов и авто-восстановление сети в 1 клик.
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => void handleAutoFix()}
+                disabled={autoFixing}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm"
+              >
+                {autoFixing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                Починить сеть в 1 клик
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
@@ -1093,9 +1228,9 @@ const NetworkPage: React.FC = () => {
                 disabled={clearingDiscord}
               >
                 {clearingDiscord ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
                 ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                 )}
                 Очистить кэш Discord
               </Button>
@@ -1105,13 +1240,26 @@ const NetworkPage: React.FC = () => {
                 onClick={() => void runDiag()}
                 disabled={diagLoading}
               >
-                <RefreshCw className={cn('h-3.5 w-3.5', diagLoading && 'animate-spin')} />
+                <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', diagLoading && 'animate-spin')} />
                 Проверить
               </Button>
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-3">
+            {autoFixReport && (
+              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-1.5 text-xs">
+                <div className="font-semibold text-emerald-400 flex items-center gap-1.5">
+                  <Check className="size-4" />
+                  Отчёт «Доктора сети»: восстановление успешно завершено
+                </div>
+                <ul className="list-disc list-inside space-y-0.5 text-foreground/90 pl-1">
+                  {autoFixReport.actions.map((act, i) => (
+                    <li key={i}>{act}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {checks.map((item) => {
               const isFixable = Boolean(item.fixable || item.canFix)
               const actionKey = item.fixAction || item.id

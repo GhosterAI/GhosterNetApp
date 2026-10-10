@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Layers, Plus, Save, Trash2 } from 'lucide-react'
+import { Layers, Plus, Save, Trash2, Download, Upload, HardDrive } from 'lucide-react'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
 import { Label } from '@renderer/components/ui/label'
@@ -12,7 +12,9 @@ import {
   profilesSwitch,
   profilesCreate,
   profilesDelete,
-  profilesSave
+  profilesSave,
+  configExportDialog,
+  configImportDialog
 } from '@renderer/utils/ipc'
 import BasePage from '@renderer/components/base/base-page'
 import { UpdateCenterCard } from '@renderer/components/update-center-card'
@@ -40,9 +42,48 @@ const Settings: React.FC = () => {
   const { appConfig, patchAppConfig, mutateAppConfig } = useAppConfig()
   const [newProfileName, setNewProfileName] = useState('')
   const [profileBusy, setProfileBusy] = useState(false)
+  const [backupBusy, setBackupBusy] = useState(false)
 
   const profiles = appConfig?.profiles ?? []
   const activeProfileId = appConfig?.activeProfileId ?? 'default'
+
+  const handleExportBackup = async (): Promise<void> => {
+    if (backupBusy) return
+    setBackupBusy(true)
+    try {
+      const res = await configExportDialog()
+      if (res.saved) {
+        toast.success('Профиль успешно экспортирован', {
+          description: res.path,
+          style: POWER_ON_BANNER_STYLE
+        })
+      }
+    } catch (e) {
+      toast.error('Не удалось экспортировать профиль', {
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setBackupBusy(false)
+    }
+  }
+
+  const handleImportBackup = async (): Promise<void> => {
+    if (backupBusy) return
+    setBackupBusy(true)
+    try {
+      const res = await configImportDialog()
+      if (res.ok) {
+        mutateAppConfig()
+        toast.success(res.message, { style: POWER_ON_BANNER_STYLE })
+      }
+    } catch (e) {
+      toast.error('Не удалось импортировать профиль', {
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setBackupBusy(false)
+    }
+  }
 
   const handleSwitchProfile = async (id: string): Promise<void> => {
     if (profileBusy || id === activeProfileId) return
@@ -201,6 +242,55 @@ const Settings: React.FC = () => {
                 <Plus className="h-3.5 w-3.5" />
                 Создать профиль
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Backup & Portability Card */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <HardDrive className="h-4 w-4 text-emerald-400" />
+                Резервная копия и перенос настроек
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Экспорт и импорт полного профиля <code className="text-[11px]">.ghosternet</code> со всеми вашими пользовательскими списками,
+                стратегиями Zapret, параметрами моста TgWs, настройками DNS-AI и Antigravity.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void handleExportBackup()}
+                disabled={backupBusy}
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                Экспорт профиля
+              </Button>
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => void handleImportBackup()}
+                disabled={backupBusy}
+              >
+                <Upload className="h-3.5 w-3.5 mr-1.5" />
+                Импорт профиля
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg border border-border/60 bg-card/40 p-3 text-xs text-muted-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <div className="font-medium text-foreground">Быстрый перенос на другой ПК или ноутбук</div>
+                <div>Файл бэкапа содержит полную конфигурацию GhosterNet и восстанавливается в 1 клик без ручной настройки.</div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="font-mono text-[11px] px-2.5 py-1 rounded bg-muted/60 text-muted-foreground border border-border/40">
+                  *.ghosternet / *.json
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>

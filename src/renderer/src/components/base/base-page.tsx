@@ -4,6 +4,7 @@ import WindowControls from '@renderer/components/window-controls'
 import React, { forwardRef, useImperativeHandle, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
+import LiveSecurityHud from '@renderer/components/live-security-hud'
 
 const sidebarPaths = new Set(['/home', '/telegram', '/zapret', '/services', '/network', '/logs', '/settings', '/about'])
 const isMac = platform === 'darwin'
@@ -27,9 +28,9 @@ const BasePage = forwardRef<HTMLDivElement, Props>((props, ref) => {
   })
 
   return (
-    <div ref={contentRef} className="w-full h-full">
-      <div className="sticky top-0 z-40 h-14.25 w-full">
-        <div className="app-drag px-2 pt-3 pb-2 flex justify-between h-14.25">
+    <div ref={contentRef} className="w-full h-full flex flex-col">
+      <div className="sticky top-0 z-40 w-full shrink-0 bg-background/80 backdrop-blur-md border-b border-border/30">
+        <div className="app-drag px-2 pt-2.5 pb-2 flex justify-between h-13.5">
           <div className="title h-full text-lg leading-8 flex items-center gap-1">
             {(isSubPage || props.showBackButton) && (
               <Button
@@ -48,8 +49,9 @@ const BasePage = forwardRef<HTMLDivElement, Props>((props, ref) => {
             {!isMac && <WindowControls />}
           </div>
         </div>
+        <LiveSecurityHud />
       </div>
-      <div className="content h-[calc(100vh-57px)] overflow-y-auto custom-scrollbar">
+      <div className="content flex-1 overflow-y-auto custom-scrollbar">
         {props.children}
       </div>
     </div>

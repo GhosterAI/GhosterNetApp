@@ -6,7 +6,8 @@ import {
   startTgws,
   stopTgws,
   restartTgws,
-  getTgwsLink
+  getTgwsLink,
+  pingTelegramDatacenters
 } from '../core/tgws'
 import { runTgwsTune } from '../core/tgws-tuner'
 import {
@@ -69,8 +70,14 @@ import {
 import {
   runSystemDiagnostics,
   fixDiagnosticIssue,
-  clearDiscordCache
+  clearDiscordCache,
+  autoFixNetwork,
+  checkLiveServices
 } from '../core/diagnostics'
+import {
+  exportFullConfig,
+  importFullConfig
+} from '../core/config-backup'
 import {
   listProfiles,
   switchProfile,
@@ -275,6 +282,7 @@ export function registerIpcMainHandlers(): void {
     installTgwsUpdate(url as string, expectedVersion as string | undefined)
   ))
   ipcMain.handle('tgws:dismissUpdate', h((tag) => dismissTgwsUpdate(tag as string)))
+  ipcMain.handle('tgws:pingDcs', h(() => pingTelegramDatacenters()))
 
   // ---- Zapret -------------------------------------------------------------
   ipcMain.handle('zapret:status', h(() => getZapretStatus()))
@@ -398,8 +406,10 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('diagnostics:run', h(() => runSystemDiagnostics()))
   ipcMain.handle('diagnostics:fix', h((checkId) => fixDiagnosticIssue(checkId as string)))
   ipcMain.handle('diagnostics:clearDiscordCache', h(() => clearDiscordCache()))
+  ipcMain.handle('diagnostics:autoFix', h(() => autoFixNetwork()))
+  ipcMain.handle('diagnostics:liveServices', h(() => checkLiveServices()))
 
-  // ---- Profiles -----------------------------------------------------------
+  // ---- Profiles & Config Backup -------------------------------------------
   ipcMain.handle('profiles:list', h(() => listProfiles()))
   ipcMain.handle('profiles:switch', h((profileId) => switchProfile(profileId as string)))
   ipcMain.handle('profiles:save', h((profileId, customName) =>
@@ -407,6 +417,55 @@ export function registerIpcMainHandlers(): void {
   ))
   ipcMain.handle('profiles:create', h((name) => createProfile(name as string)))
   ipcMain.handle('profiles:delete', h((profileId) => deleteProfile(profileId as string)))
+  ipcMain.handle('config:exportFull', h(() => exportFullConfig()))
+  ipcMain.handle('config:importFull', h((raw) => importFullConfig(raw as string)))
+  ipcMain.handle('config:exportDialog', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const json = await exportFullConfig()
+    const result = win
+      ? await dialog.showSaveDialog(win, {
+          title: 'Экспорт профиля GhosterNet',
+          defaultPath: `ghosternet-profile-${new Date().toISOString().slice(0, 10)}.ghosternet`,
+          filters: [
+            { name: 'GhosterNet Backup (*.ghosternet)', extensions: ['ghosternet'] },
+            { name: 'JSON (*.json)', extensions: ['json'] }
+          ]
+        })
+      : await dialog.showSaveDialog({
+          title: 'Экспорт профиля GhosterNet',
+          defaultPath: `ghosternet-profile-${new Date().toISOString().slice(0, 10)}.ghosternet`,
+          filters: [
+            { name: 'GhosterNet Backup (*.ghosternet)', extensions: ['ghosternet'] },
+            { name: 'JSON (*.json)', extensions: ['json'] }
+          ]
+        })
+    if (result.canceled || !result.filePath) return { saved: false }
+    const { writeFileSync } = await import('fs')
+    writeFileSync(result.filePath, json, 'utf8')
+    return { saved: true, path: result.filePath }
+  })
+  ipcMain.handle('config:importDialog', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const result = win
+      ? await dialog.showOpenDialog(win, {
+          title: 'Импорт профиля GhosterNet',
+          filters: [
+            { name: 'GhosterNet Backup (*.ghosternet, *.json)', extensions: ['ghosternet', 'json'] }
+          ],
+          properties: ['openFile']
+        })
+      : await dialog.showOpenDialog({
+          title: 'Импорт профиля GhosterNet',
+          filters: [
+            { name: 'GhosterNet Backup (*.ghosternet, *.json)', extensions: ['ghosternet', 'json'] }
+          ],
+          properties: ['openFile']
+        })
+    if (result.canceled || result.filePaths.length === 0) return { ok: false, message: 'Отменено' }
+    const { readFileSync } = await import('fs')
+    const content = readFileSync(result.filePaths[0], 'utf8')
+    return await importFullConfig(content)
+  })
 
   // ---- GhosterNet self-update ---------------------------------------------
   ipcMain.handle('app:checkUpdate', h((force) => checkAppUpdate(Boolean(force))))
