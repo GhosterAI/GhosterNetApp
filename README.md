@@ -71,12 +71,12 @@
 
 ```mermaid
 flowchart LR
-    A["Ваш ПК (Windows 10/11)"] --> B{"Классификатор GhosterNet"}
-    B -->|"DPI сайты (YouTube, Discord)"| C["Zapret + WinDivert (Локальная десинхронизация)"]
-    B -->|"Telegram (Медиа, Звонки)"| D["TgWsProxy (WebSocket -> Cloudflare -> DC1-5)"]
-    B -->|"ИИ сервисы (Gemini, ChatGPT)"| E["DNS-AI (DoH Comss / Xbox / Malw)"]
-    B -->|"Google Antigravity IDE"| F["AG Unlocker (Loopback 127.0.10.x + Watchdog)"]
-    B -->|"Обычный трафик (Банки, Игры)"| G["Прямое соединение (100% скорость, 0 мс лаг)"]
+    A["Ваш ПК — Windows 10/11"] --> B{"Классификатор GhosterNet"}
+    B -->|"DPI сайты — YouTube, Discord"| C["Zapret + WinDivert — Десинхронизация"]
+    B -->|"Telegram — Медиа, Звонки"| D["TgWsProxy — WebSocket через Cloudflare"]
+    B -->|"ИИ сервисы — Gemini, ChatGPT"| E["DNS-AI — DoH Comss, Xbox, Malw"]
+    B -->|"Google Antigravity IDE"| F["AG Unlocker — Loopback 127.0.10.x"]
+    B -->|"Обычный трафик — Банки, Игры"| G["Прямое соединение — 100% скорость"]
 
     C --> H["Провайдер / Интернет"]
     D --> H
@@ -145,12 +145,12 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    TG["Telegram Desktop"] -->|"MTProto (127.0.0.1:1443)"| PROXY["TgWsProxy v1.11.1"]
-    PROXY -->|"WebSocket + Fake-TLS (ee-секреты)"| CF["Cloudflare Edge Network"]
-    CF -->|"Прямой туннель"| DC1["DC1 (Майами)"]
-    CF -->|"Прямой туннель"| DC2["DC2 (Амстердам)"]
-    CF -->|"Прямой туннель"| DC4["DC4 (Амстердам)"]
-    CF -->|"Прямой туннель"| DC5["DC5 (Сингапур)"]
+    TG["Telegram Desktop"] -->|"MTProto 127.0.0.1:1443"| PROXY["TgWsProxy v1.11.1"]
+    PROXY -->|"WebSocket + Fake-TLS"| CF["Cloudflare Edge Network"]
+    CF -->|"Прямой туннель"| DC1["DC1 — Майами"]
+    CF -->|"Прямой туннель"| DC2["DC2 — Амстердам"]
+    CF -->|"Прямой туннель"| DC4["DC4 — Амстердам"]
+    CF -->|"Прямой туннель"| DC5["DC5 — Сингапур"]
 
     style TG fill:#0ea5e9,stroke:#0284c7,color:#fff
     style PROXY fill:#7c3aed,stroke:#6d28d9,color:#fff
@@ -172,8 +172,8 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    Browser["Браузер / Приложение (gemini.google.com)"] --> Resolver{"DNS-AI Резолвер"}
-    Resolver -->|"Режим 1: Stub Proxy"| Stub["Служба DnsAiClient (127.0.0.1:53)"]
+    Browser["Браузер / Приложение — gemini.google.com"] --> Resolver{"DNS-AI Резолвер"}
+    Resolver -->|"Режим 1: Stub Proxy"| Stub["Служба DnsAiClient — 127.0.0.1:53"]
     Resolver -->|"Режим 2: Нативный DoH"| Native["Windows 11 DoH Engine"]
     
     Stub --> Upstreams{"Выбранный апстрим"}
@@ -211,13 +211,13 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Click(["Нажатие кнопки «Починить сеть в 1 клик»"]) --> Step1["1. Сброс DNS-кэша Windows (ipconfig /flushdns)"]
-    Step1 --> Step2["2. Полная очистка повреждённого кэша Discord (GPU/CodeCache)"]
-    Step2 --> Step3["3. Проверка и перезапуск службы Base Filtering Engine (BFE)"]
-    Step3 --> Step4["4. Снятие зависших блокировок WinDivert и очистка сокетов"]
-    Step4 --> Step5["5. Перезапуск служб DnsAiClient и планировщика Antigravity"]
-    Step5 --> Step6["6. Оптимизация сетевого стека (Включение TCP Timestamps)"]
-    Step6 --> Done(["✅ Сеть полностью восстановлена!"])
+    Click["Кнопка «Починить сеть в 1 клик»"] --> Step1["1. Сброс DNS-кэша Windows — ipconfig /flushdns"]
+    Step1 --> Step2["2. Очистка кэша Discord — GPU и CodeCache"]
+    Step2 --> Step3["3. Перезапуск службы Base Filtering Engine BFE"]
+    Step3 --> Step4["4. Снятие блокировок WinDivert и очистка сокетов"]
+    Step4 --> Step5["5. Перезапуск служб DnsAiClient и Antigravity"]
+    Step5 --> Step6["6. Оптимизация сетевого стека — TCP Timestamps"]
+    Step6 --> Done["Сеть полностью восстановлена!"]
 ```
 
 #### Live Security HUD & Мониторинг доступности
@@ -253,47 +253,47 @@ GhosterNet сворачивается в компактную иконку си�
 ## 📊 Глобальная схема маршрутизации
 
 ```mermaid
-graph TD
-    subgraph ClientPC ["Ваш компьютер (Windows 10 / 11 x64)"]
+flowchart TD
+    subgraph ClientPC ["Ваш компьютер — Windows 10 / 11 x64"]
         direction TB
-        AppBrowser["Браузеры (Chrome, Edge, Firefox)"]
-        AppDiscord["Discord (Чат, Звонки, Стримы)"]
+        AppBrowser["Браузеры — Chrome, Edge, Firefox"]
+        AppDiscord["Discord — Чат, Звонки, Стримы"]
         AppTG["Telegram Desktop"]
         AppIDE["Google Antigravity IDE"]
-        AppGames["Игры (Steam, Riot, Epic Games)"]
+        AppGames["Игры — Steam, Riot, Epic Games"]
     end
 
-    subgraph GhosterCore ["GhosterNet v2.2.0 Core Engines"]
+    subgraph GhosterCore ["Ядра GhosterNet v2.2.0"]
         direction TB
-        EngineDPI["Zapret (winws.exe) + WinDivert64"]
-        EngineTG["TgWsProxy (127.0.0.1:1443)"]
-        EngineDNS["DNS-AI (127.0.0.1:53 / DoH)"]
-        EngineAG["AG Unlocker (127.0.0.1:24816)"]
-        EngineDoctor["«Доктор сети» (Auto-Fix Engine)"]
+        EngineDPI["Zapret — winws.exe + WinDivert64"]
+        EngineTG["TgWsProxy — 127.0.0.1:1443"]
+        EngineDNS["DNS-AI — 127.0.0.1:53 / DoH"]
+        EngineAG["AG Unlocker — 127.0.0.1:24816"]
+        EngineDoctor["«Доктор сети» — Auto-Fix Engine"]
     end
 
     subgraph Internet ["Сеть Интернет / Внешние сервисы"]
         direction TB
-        SrvWeb["Сайты и YouTube (Прямое подключение)"]
-        SrvCF["Cloudflare Edge -> Telegram DC1-DC5"]
-        SrvAI["ChatGPT, Claude, Gemini (Через DoH)"]
+        SrvWeb["Сайты и YouTube — Прямое подключение"]
+        SrvCF["Cloudflare Edge — Telegram DC1–DC5"]
+        SrvAI["ChatGPT, Claude, Gemini — Через DoH"]
         SrvGoogle["Google Cloud AI Services"]
-        SrvGameServers["Игровые сервера (Минимальный пинг)"]
+        SrvGameServers["Игровые сервера — Минимальный пинг"]
     end
 
-    AppBrowser -->|Порт 443 TCP/UDP| EngineDPI
-    AppDiscord -->|Голос UDP + API| EngineDPI
-    AppBrowser -->|DNS запросы| EngineDNS
-    AppTG -->|MTProto WS| EngineTG
-    AppIDE -->|Loopback 127.0.10.x| EngineAG
-    AppGames -->|Прямой трафик (Игровой фильтр)| SrvGameServers
+    AppBrowser -->|"Порт 443 TCP и UDP"| EngineDPI
+    AppDiscord -->|"Голос UDP + API"| EngineDPI
+    AppBrowser -->|"DNS запросы"| EngineDNS
+    AppTG -->|"MTProto WS"| EngineTG
+    AppIDE -->|"Loopback 127.0.10.x"| EngineAG
+    AppGames -->|"Прямой трафик — Игровой фильтр"| SrvGameServers
 
-    EngineDPI -->|Десинхронизированные пакеты| SrvWeb
-    EngineTG -->|WebSocket Fake-TLS| SrvCF
-    EngineDNS -->|Зашифрованные DNS запросы| SrvAI
-    EngineAG -->|Прокси туннель| SrvGoogle
+    EngineDPI -->|"Десинхронизированные пакеты"| SrvWeb
+    EngineTG -->|"WebSocket Fake-TLS"| SrvCF
+    EngineDNS -->|"Зашифрованные DNS запросы"| SrvAI
+    EngineAG -->|"Прокси туннель"| SrvGoogle
 
-    EngineDoctor -.->|Контроль и лечение стека| ClientPC
+    EngineDoctor -.->|"Контроль и лечение стека"| ClientPC
 ```
 
 ---
