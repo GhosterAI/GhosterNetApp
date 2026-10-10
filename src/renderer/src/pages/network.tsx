@@ -29,6 +29,13 @@ import {
   dnsGetStatus,
   dnsApplyConfig,
   dnsResetDhcp,
+  dnsAiGetStatus,
+  dnsAiEnable,
+  dnsAiDisable,
+  dnsAiSetSettings,
+  dnsAiInstallService,
+  dnsAiUninstallService,
+  dnsAiTestDoh,
   modsList,
   modsToggle,
   modsRemove,
@@ -37,12 +44,19 @@ import {
   diagnosticsFix,
   diagnosticsClearDiscordCache,
   type DnsPresetDescriptor,
-  type DnsManagerStatus
+  type DnsManagerStatus,
+  type DnsAiStatus
 } from '@renderer/utils/ipc'
 
 const NetworkPage: React.FC = () => {
   const { appConfig, patchAppConfig, mutateAppConfig } = useAppConfig()
   const dnsCfg = appConfig?.dns
+
+  // DNS-AI state
+  const [dnsAi, setDnsAi] = useState<DnsAiStatus | null>(null)
+  const [dnsAiBusy, setDnsAiBusy] = useState(false)
+  const [dohTestOutput, setDohTestOutput] = useState<string | null>(null)
+  const [dohTesting, setDohTesting] = useState(false)
 
   // DNS state
   const [presets, setPresets] = useState<DnsPresetDescriptor[]>([])
@@ -59,6 +73,15 @@ const NetworkPage: React.FC = () => {
   const [diagLoading, setDiagLoading] = useState(false)
   const [fixingId, setFixingId] = useState<string | null>(null)
   const [clearingDiscord, setClearingDiscord] = useState(false)
+
+  const refreshDnsAi = async (): Promise<void> => {
+    try {
+      const st = await dnsAiGetStatus()
+      setDnsAi(st)
+    } catch {
+      // ignore
+    }
+  }
 
   const refreshDns = async (): Promise<void> => {
     try {
@@ -95,10 +118,112 @@ const NetworkPage: React.FC = () => {
   }
 
   useEffect(() => {
+    void refreshDnsAi()
     void refreshDns()
     void refreshMods()
     void runDiag()
   }, [])
+
+  const handleToggleDnsAi = async (): Promise<void> => {
+    if (dnsAiBusy) return
+    setDnsAiBusy(true)
+    const enabling = !dnsAi?.enabled
+    const tId = toast.loading(
+      enabling
+        ? 'Включаем шифрованный резолвер DNS-AI…'
+        : 'Отключаем DNS-AI и восстанавливаем системный DNS…'
+    )
+    try {
+      const st = enabling ? await dnsAiEnable() : await dnsAiDisable()
+      setDnsAi(st)
+      if (enabling && st.enabled) {
+        toast.success(
+          `DNS-AI включён (режим: ${st.settings.mode === 'native' ? 'Native DoH Win11' : 'Локальный DoH-прокси 127.0.0.1:53'})`,
+          {
+            id: tId,
+            style: POWER_ON_BANNER_STYLE
+          }
+        )
+      } else {
+        toast.success('DNS-AI отключён, настройки адаптеров восстановлены', { id: tId })
+      }
+      void refreshDns()
+    } catch (e) {
+      toast.error('Ошибка управления DNS-AI', {
+        id: tId,
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setDnsAiBusy(false)
+    }
+  }
+
+  const handleDnsAiPatchSettings = async (
+    partial: Partial<DnsAiStatus['settings']>
+  ): Promise<void> => {
+    if (dnsAiBusy) return
+    setDnsAiBusy(true)
+    try {
+      const st = await dnsAiSetSettings(partial)
+      setDnsAi(st)
+      toast.success('Настройки DNS-AI обновлены')
+    } catch (e) {
+      toast.error('Не удалось сохранить настройки DNS-AI', {
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setDnsAiBusy(false)
+    }
+  }
+
+  const handleTestDoh = async (): Promise<void> => {
+    if (dohTesting) return
+    setDohTesting(true)
+    const tId = toast.loading('Проверяем узлы DoH dns.dns-ai.ru…')
+    try {
+      const res = await dnsAiTestDoh('proto.dns-ai.ru', 'TXT')
+      setDohTestOutput(res.output)
+      if (res.ok) {
+        toast.success(`DoH отвечает (${res.latencyMs} мс)`, {
+          id: tId,
+          style: POWER_ON_BANNER_STYLE
+        })
+      } else {
+        toast.warning('Проверка завершена с предупреждениями', { id: tId })
+      }
+    } catch (e) {
+      toast.error('Ошибка проверки DoH', {
+        id: tId,
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setDohTesting(false)
+    }
+  }
+
+  const handleDnsAiServiceToggle = async (): Promise<void> => {
+    if (dnsAiBusy) return
+    setDnsAiBusy(true)
+    const installing = !dnsAi?.serviceInstalled
+    const tId = toast.loading(
+      installing ? 'Устанавливаем службу DnsAiClient…' : 'Удаляем службу DnsAiClient…'
+    )
+    try {
+      const st = installing ? await dnsAiInstallService() : await dnsAiUninstallService()
+      setDnsAi(st)
+      toast.success(
+        installing ? 'Служба DnsAiClient установлена и запущена' : 'Служба DnsAiClient удалена',
+        { id: tId, style: installing ? POWER_ON_BANNER_STYLE : undefined }
+      )
+    } catch (e) {
+      toast.error('Ошибка управления службой DnsAiClient', {
+        id: tId,
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setDnsAiBusy(false)
+    }
+  }
 
   const selectedPreset = dnsCfg?.presetId ?? dnsStatus?.presetId ?? 'cloudflare'
 
@@ -260,6 +385,194 @@ const NetworkPage: React.FC = () => {
   return (
     <BasePage title="Моды, DNS и Диагностика">
       <div className="px-4 pb-6 space-y-4">
+        {/* DNS-AI Encrypted DoH Card */}
+        <Card className={cn(dnsAi?.enabled && 'border-emerald-500/40')}>
+          <CardHeader className="space-y-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                DNS-AI (Шифрованный DoH для AI-сервисов)
+                {dnsAi?.enabled ? (
+                  <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
+                    Активен ({dnsAi.settings.mode === 'native' ? 'Native DoH' : 'Stub 127.0.0.1:53'})
+                  </span>
+                ) : (
+                  <span className="rounded bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    Отключён
+                  </span>
+                )}
+                {dnsAi?.serviceInstalled && (
+                  <span className="rounded bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
+                    Служба Windows {dnsAi.serviceRunning ? 'запущена' : 'установлена'}
+                  </span>
+                )}
+              </CardTitle>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void handleTestDoh()}
+                  disabled={dohTesting}
+                >
+                  {dohTesting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  Проверить DoH
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => void refreshDnsAi()}>
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Шифрованный DNS-over-HTTPS / DNS-over-TLS клиент{' '}
+              <code className="text-foreground">dns.dns-ai.ru</code> для доступа к ChatGPT, Claude,
+              Gemini, Copilot и Google AI без VPN. Автоматически сохраняет и восстанавливает исходные
+              настройки сетевых адаптеров.
+            </p>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => void handleDnsAiPatchSettings({ mode: 'stub' })}
+                disabled={dnsAiBusy}
+                className={cn(
+                  'cursor-pointer text-left rounded-lg border p-3 transition',
+                  (dnsAi?.settings?.mode ?? 'stub') === 'stub'
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border hover:bg-accent/30'
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-sm">Локальный прокси (Stub 127.0.0.1:53)</span>
+                  <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">
+                    Win 10 / 11
+                  </span>
+                </div>
+                <div className="mt-1 font-mono text-xs text-foreground/80">
+                  127.0.0.1:53 → {dnsAi?.endpoints?.dohUrl || 'https://dns.dns-ai.ru/dns-query'}
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Локальный DoH/DoT-резолвер с кэшированием и защитой от перехвата провайдером
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleDnsAiPatchSettings({ mode: 'native' })}
+                disabled={dnsAiBusy || (dnsAi != null && !dnsAi.nativeSupported)}
+                className={cn(
+                  'cursor-pointer text-left rounded-lg border p-3 transition',
+                  dnsAi?.settings?.mode === 'native'
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border hover:bg-accent/30',
+                  dnsAi != null && !dnsAi.nativeSupported && 'opacity-50 cursor-not-allowed'
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-sm">Нативный DoH Windows 11</span>
+                  <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                    Win 11+
+                  </span>
+                </div>
+                <div className="mt-1 font-mono text-xs text-foreground/80">
+                  {dnsAi?.endpoints?.ipv4?.join(' / ') || '186.246.49.127 / 192.144.59.14'}
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Прямая регистрация шаблона DoH в системном DNS-клиенте Windows 11
+                </p>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="flex items-center justify-between rounded-lg border border-border bg-background/40 px-3 py-2">
+                <div>
+                  <div className="text-xs font-medium">Поддержка IPv6</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Настраивать также IPv6-резолверы (::1 / {dnsAi?.endpoints?.ipv6?.[0] || '2a0a:2b41::53'})
+                  </div>
+                </div>
+                <Switch
+                  checked={Boolean(dnsAi?.settings?.ipv6)}
+                  disabled={dnsAiBusy}
+                  onCheckedChange={(v) => void handleDnsAiPatchSettings({ ipv6: v })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-border bg-background/40 px-3 py-2">
+                <div>
+                  <div className="text-xs font-medium">Применять к VPN-адаптерам</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Включать виртуальные и туннельные интерфейсы при смене DNS
+                  </div>
+                </div>
+                <Switch
+                  checked={Boolean(dnsAi?.settings?.include_vpn_adapters)}
+                  disabled={dnsAiBusy}
+                  onCheckedChange={(v) => void handleDnsAiPatchSettings({ include_vpn_adapters: v })}
+                />
+              </div>
+            </div>
+
+            {dohTestOutput && (
+              <div className="rounded-lg border border-border bg-background/60 p-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Результат проверки DoH-узлов (proto.dns-ai.ru):
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDohTestOutput(null)}
+                    className="text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    Скрыть
+                  </button>
+                </div>
+                <pre className="text-[11px] font-mono whitespace-pre-wrap text-foreground/90 max-h-40 overflow-y-auto">
+                  {dohTestOutput}
+                </pre>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant={dnsAi?.enabled ? 'destructive' : 'default'}
+                  onClick={() => void handleToggleDnsAi()}
+                  disabled={dnsAiBusy || !dnsAi?.available}
+                >
+                  {dnsAiBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                  )}
+                  {dnsAi?.enabled ? 'Отключить DNS-AI' : 'Включить DNS-AI'}
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void handleDnsAiServiceToggle()}
+                  disabled={dnsAiBusy || !dnsAi?.available}
+                >
+                  {dnsAi?.serviceInstalled ? 'Удалить службу Windows' : 'Установить службу автозапуска'}
+                </Button>
+              </div>
+
+              {dnsAi?.stubRunning && (
+                <span className="text-xs text-emerald-400 font-mono">
+                  Локальный stub 127.0.0.1:53 активен
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* DNS Manager Card */}
         <Card>
           <CardHeader className="space-y-1">

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/u
 import { Button } from '@renderer/components/ui/button'
 import BasePage from '@renderer/components/base/base-page'
 import { BUNDLED_TGWS_VERSION, BUNDLED_ZAPRET_VERSION } from '@renderer/lib/utils'
+import ghostSculpture from '@renderer/assets/ghost-sculpture.svg'
 
 const About: React.FC = () => {
   const openUrl = (url: string): void => {
@@ -14,14 +15,25 @@ const About: React.FC = () => {
     <BasePage title="Информация">
       <div className="px-4 pb-6 space-y-4">
         <Card>
-          <CardHeader>
-            <CardTitle>О приложении GhosterNet</CardTitle>
+          <CardHeader className="flex flex-row items-center gap-3.5 pb-2">
+            <img
+              src={ghostSculpture}
+              alt="GhosterNet"
+              draggable={false}
+              className="h-12 w-12 object-contain select-none pointer-events-none shrink-0"
+            />
+            <div>
+              <CardTitle>О приложении GhosterNet</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Свободная сеть без границ — Zapret, Telegram WS Proxy, DNS-AI и Antigravity Unlocker
+              </p>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
               <span className="font-semibold text-foreground">GhosterNet</span> — универсальный
-              клиент для обхода сетевых ограничений DPI и ускорения Telegram с полной поддержкой
-              системных служб, DNS/DoH, модов и пользовательских списков.
+              клиент для обхода сетевых ограничений DPI, ускорения Telegram и разблокировки ИИ-сервисов
+              с полной поддержкой системных служб, DNS-AI, Antigravity Unlocker и пользовательских списков.
             </p>
             <p>Ключевые возможности приложения:</p>
             <ul className="list-disc pl-5 space-y-1.5">
@@ -43,14 +55,24 @@ const About: React.FC = () => {
                 бесконфликтная работа совместно с VPN.
               </li>
               <li>
+                <span className="font-semibold text-foreground">
+                  Antigravity Unlocker (v2.21.1)
+                </span>{' '}
+                — работа Google Antigravity IDE без VPN и смены региона аккаунта Google через
+                локальный туннель, Loopback IP, Hosts Pinning и патчинг IDE.
+              </li>
+              <li>
+                <span className="font-semibold text-foreground">
+                  DNS-AI (v1.0.0) &amp; Системный DNS
+                </span>{' '}
+                — локальный зашифрованный DoH/DoT резолвер (127.0.0.1:53) с поддержкой Comss,
+                Xbox DNS, Malw.link, Cloudflare и Quad9 для разблокировки ChatGPT, Claude, Gemini
+                и Copilot, а также встроенная диагностика служб Windows.
+              </li>
+              <li>
                 <span className="font-semibold text-foreground">Каталог сервисов и Hosts</span> —
                 24 готовых пресета для игр, соцсетей и ИИ-сервисов, 4 коллекции пользовательских
                 списков и автоматическое управление системным файлом <code className="text-xs">hosts</code>.
-              </li>
-              <li>
-                <span className="font-semibold text-foreground">DNS &amp; Диагностика</span> —
-                переключение системных DNS/DoH (Xbox DNS, Comss, Cloudflare, Google, Quad9) и
-                встроенная диагностика служб Windows с автоисправлением.
               </li>
             </ul>
 

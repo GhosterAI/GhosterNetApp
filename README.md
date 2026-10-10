@@ -12,7 +12,7 @@
 
 ## О проекте
 
-**GhosterNet** — десктопное приложение для Windows (Electron + React + TypeScript), объединяющее локальный WebSocket-прокси для Telegram (**TgWsProxy**) и систему обхода блокировок на пакетном уровне (**Zapret / WinDivert**) с расширенным управлением сервисами, DNS/DoH, системным файлом `hosts`, модами и диагностикой сети.
+**GhosterNet** — десктопное приложение для Windows (Electron + React + TypeScript), объединяющее локальный WebSocket-прокси для Telegram (**TgWsProxy**), систему обхода блокировок на пакетном уровне (**Zapret / WinDivert**), локальный зашифрованный DNS-резолвер для ИИ (**DNS-AI**) и модуль разблокировки Google Antigravity IDE (**Antigravity Unlocker**) с расширенным управлением сервисами, системным файлом `hosts`, модами и диагностикой сети.
 
 ---
 
@@ -39,18 +39,25 @@
 - **Блокировка QUIC (UDP 443)** через брандмауэр Windows для принудительного перехода браузеров на TLS/TCP.
 - **Совместимость с VPN**: автоматическое обнаружение активных VPN/TUN/WireGuard-соединений и исключение их IP и UDP-портов (`51820` и др.) из перехвата WinDivert.
 
-### 3. Каталог сервисов, списки и системный Hosts
-- **24 готовых пресета сервисов** в 3 категориях:
-  - *Игры и лаунчеры*: Epic Games, Battle.net, Riot Games, League of Legends (включая спец-профиль TCP 2099 `syndata`), Roblox, Minecraft / Modrinth / CurseForge, Steam, EA / Origin, Ubisoft Connect, Genshin Impact / HoYoverse.
-  - *Соцсети и медиа*: YouTube, Discord, Telegram, Twitch, Spotify, Instagram / Facebook, X (Twitter), TikTok, SoundCloud, Rutracker.
-  - *Работа и ИИ*: ChatGPT / OpenAI, Claude / Gemini / Copilot, GitHub, Notion / Figma / Canva.
-- **4 коллекции пользовательских списков** (`list-general-user.txt`, `list-exclude-user.txt`, `ipset-all-user.txt`, `ipset-exclude-user.txt`) и встроенный редактор файлов `lists/*.txt`.
-- **Менеджер системного файла `hosts`** (`C:\Windows\System32\drivers\etc\hosts`): безопасное добавление и очистка изолированного блока `# === GhosterNet START/END ===` с автоматическим сбросом DNS-кэша (`ipconfig /flushdns`).
+### 3. Antigravity Unlocker (`v2.21.1`)
+- Разблокировка **Google Antigravity IDE** без VPN и без смены региона аккаунта Google.
+- **Два режима работы**:
+  - **Быстрый запуск (`--run`)**: автоматическое поднятие фонового демона (`127.0.0.1:24816`), привязка Loopback IP (`127.0.10.2–6`), привязка в `hosts`, автопатч IDE и запуск Antigravity.
+  - **Ручное управление шагами**: раздельное включение фонового демона (Watchdog + Local Proxy + DNS Forwarder), пропатчивание и откат патча файлов IDE (`product.json`, `workbench`, `main.js`, `language_server`), проверка реального IP выхода и очистка всех сетевых изменений в один клик.
+- Поддержка внешнего прокси (`socks5://` / `http://`) с проверкой задержки и географии выходного IP.
 
-### 4. Моды, DNS & DoH и Диагностика
-- **Управление DNS и DoH**: быстрое переключение системных DNS-серверов (*Xbox DNS*, *Comss.one*, *Cloudflare*, *Google*, *Quad9*, *Yandex* или свой IPv4/DoH) и возврат к стандартному DHCP.
+### 4. DNS-AI (`v1.0.0`) & Системный DNS / DoH
+- **DNS-AI (Локальный DoH/DoT прокси `127.0.0.1:53`)**:
+  - Встроенная служба `DNS_AI_Service` с поддержкой AI-ориентированных апстримов (**Comss**, **Xbox DNS**, **Malw.link**) и базовых (**Cloudflare**, **Quad9**) для работы с ChatGPT, Claude, Gemini, Copilot без смены системных настроек вручную.
+  - Живой пинг всех DoH/DoT эндпоинтов, переключение апстрима на лету через IPC (`127.0.0.1:15353`) и встроенный инструмент **Аварийного сброса сети (Rescue Network)**.
+- **Системный DNS и DoH**: быстрое переключение DNS-серверов сетевых адаптеров Windows и возврат к стандартному DHCP.
+
+### 5. Каталог сервисов, списки, моды и Диагностика
+- **24 готовых пресета сервисов** в 3 категориях (*Игры и лаунчеры*, *Соцсети и медиа*, *Работа и ИИ*).
+- **4 коллекции пользовательских списков** (`list-general-user.txt`, `list-exclude-user.txt`, `ipset-all-user.txt`, `ipset-exclude-user.txt`) и встроенный редактор файлов `lists/*.txt`.
+- **Менеджер системного файла `hosts`** (`C:\Windows\System32\drivers\etc\hosts`) с автоматическим сбросом DNS-кэша.
 - **Менеджер модов**: подключение и отключение пакетов стратегий, импорт сторонних `.zip`-модов.
-- **Диагностика системы**: проверка прав Администратора, службы базовой фильтрации (`BFE`), драйвера `WinDivert64.sys`, `TCP Timestamps`, конфликтующих служб (`GoodbyeDPI`, `Killer Network`, `SmartByte`) и соединения с GitHub с кнопками исправления в один клик + очистка кэша Discord.
+- **Диагностика системы**: проверка прав Администратора, службы `BFE`, драйвера `WinDivert64.sys`, `TCP Timestamps`, конфликтующих служб и соединения с GitHub с автоисправлением + очистка кэша Discord.
 - **Профили конфигурации**: сохранение и мгновенное переключение пресетов настроек с главного экрана или из меню системного трея.
 
 ---

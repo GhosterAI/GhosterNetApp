@@ -2,7 +2,7 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from 'next-themes'
-import { Home as HomeIcon, ScrollText, Settings as SettingsIcon, Info as InfoIcon, PanelLeftClose, PanelLeft, LayoutGrid, Blocks } from 'lucide-react'
+import { Home as HomeIcon, ScrollText, Settings as SettingsIcon, Info as InfoIcon, PanelLeftClose, PanelLeft, LayoutGrid, Blocks, Rocket } from 'lucide-react'
 import ZapretIcon from '@renderer/components/zapret-icon'
 import TelegramIcon from '@renderer/components/telegram-icon'
 import logoDark from '@renderer/assets/logo.png'
@@ -21,14 +21,15 @@ import {
 } from '@renderer/components/ui/sidebar'
 
 const nav = [
-  { key: 'home',     path: '/home',     icon: HomeIcon,     label: 'Главная' },
-  { key: 'telegram', path: '/telegram', icon: TelegramIcon, label: 'Telegram' },
-  { key: 'zapret',   path: '/zapret',   icon: ZapretIcon,   label: 'Zapret' },
-  { key: 'services', path: '/services', icon: LayoutGrid,   label: 'Сервисы' },
-  { key: 'network',  path: '/network',  icon: Blocks,       label: 'Моды и DNS' },
-  { key: 'logs',     path: '/logs',     icon: ScrollText,   label: 'Логи' },
-  { key: 'settings', path: '/settings', icon: SettingsIcon, label: 'Настройки' },
-  { key: 'about',    path: '/about',    icon: InfoIcon,     label: 'Информация' }
+  { key: 'home',        path: '/home',        icon: HomeIcon,     label: 'Главная' },
+  { key: 'telegram',    path: '/telegram',    icon: TelegramIcon, label: 'Telegram' },
+  { key: 'zapret',      path: '/zapret',      icon: ZapretIcon,   label: 'Zapret' },
+  { key: 'antigravity', path: '/antigravity', icon: Rocket,       label: 'Antigravity' },
+  { key: 'services',    path: '/services',    icon: LayoutGrid,   label: 'Сервисы' },
+  { key: 'network',     path: '/network',     icon: Blocks,       label: 'Моды и DNS' },
+  { key: 'logs',        path: '/logs',        icon: ScrollText,   label: 'Логи' },
+  { key: 'settings',    path: '/settings',    icon: SettingsIcon, label: 'Настройки' },
+  { key: 'about',       path: '/about',       icon: InfoIcon,     label: 'Информация' }
 ]
 
 const AppSidebar: React.FC = () => {

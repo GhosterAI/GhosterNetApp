@@ -1,7 +1,7 @@
 {
   "name": "ghosternet",
-  "version": "2.0.0",
-  "description": "GhosterNet — DPI Bypass & Telegram WS Proxy",
+  "version": "2.1.0",
+  "description": "GhosterNet — DPI Bypass, Telegram WS Proxy, DNS-AI & Antigravity Unlocker",
   "main": "./out/main/index.js",
   "author": "GhosterAI",
   "homepage": "https://github.com/GhosterAI/GhosterNetApp",

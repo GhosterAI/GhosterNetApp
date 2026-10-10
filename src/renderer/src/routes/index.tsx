@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom'
 import Home from '@renderer/pages/home'
 import Telegram from '@renderer/pages/telegram'
 import Zapret from '@renderer/pages/zapret'
+import AntigravityPage from '@renderer/pages/antigravity'
 import ServicesPage from '@renderer/pages/services'
 import NetworkPage from '@renderer/pages/network'
 import Logs from '@renderer/pages/logs'
@@ -13,6 +14,7 @@ const routes = [
   { path: '/home', element: <Home /> },
   { path: '/telegram', element: <Telegram /> },
   { path: '/zapret', element: <Zapret /> },
+  { path: '/antigravity', element: <AntigravityPage /> },
   { path: '/services', element: <ServicesPage /> },
   { path: '/network', element: <NetworkPage /> },
   { path: '/logs', element: <Logs /> },

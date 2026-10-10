@@ -88,6 +88,31 @@ import {
   installAppUpdate,
   dismissAppUpdate
 } from '../core/app-updater'
+import {
+  getDnsAiStatus,
+  enableDnsAi,
+  disableDnsAi,
+  setDnsAiSettings,
+  installDnsAiService,
+  uninstallDnsAiService,
+  testDnsAiDoh
+} from '../core/dns-ai'
+import {
+  getAgStatus,
+  patchAgInstall,
+  unpatchAgInstall,
+  setAgCapability,
+  enableAgAll,
+  disableAgAll,
+  repairAgService,
+  setAgOwnProxy,
+  setAgGroupKey,
+  setAgProvider,
+  reorderAgProviders,
+  addAgManualPath,
+  removeAgManualPath,
+  getAgLogs
+} from '../core/ag-unlocker'
 import { execFile } from 'node:child_process'
 import { writeFileSync, unlinkSync } from 'node:fs'
 import path from 'node:path'
@@ -378,6 +403,65 @@ export function registerIpcMainHandlers(): void {
     installAppUpdate(url as string, expectedVersion as string | undefined)
   ))
   ipcMain.handle('app:dismissUpdate', h((tag) => dismissAppUpdate(tag as string)))
+
+  // ---- DNS-AI (Encrypted DoH for AI services) -----------------------------
+  ipcMain.handle('dnsAi:status', h(() => getDnsAiStatus()))
+  ipcMain.handle('dnsAi:enable', h(() => enableDnsAi()))
+  ipcMain.handle('dnsAi:disable', h(() => disableDnsAi()))
+  ipcMain.handle(
+    'dnsAi:setSettings',
+    h((partial) => setDnsAiSettings((partial ?? {}) as Record<string, unknown>))
+  )
+  ipcMain.handle('dnsAi:installService', h(() => installDnsAiService()))
+  ipcMain.handle('dnsAi:uninstallService', h(() => uninstallDnsAiService()))
+  ipcMain.handle(
+    'dnsAi:testDoh',
+    h((domain, qtype) =>
+      testDnsAiDoh(domain as string | undefined, qtype as string | undefined)
+    )
+  )
+
+  // ---- Antigravity Unlocker -----------------------------------------------
+  ipcMain.handle('ag:status', h((deep) => getAgStatus(Boolean(deep))))
+  ipcMain.handle('ag:patch', h((targetPath) => patchAgInstall(targetPath as string | undefined)))
+  ipcMain.handle(
+    'ag:unpatch',
+    h((targetPath) => unpatchAgInstall(targetPath as string | undefined))
+  )
+  ipcMain.handle(
+    'ag:setCap',
+    h((cap, enabled) => setAgCapability(cap as string, Boolean(enabled)))
+  )
+  ipcMain.handle('ag:enableAll', h(() => enableAgAll()))
+  ipcMain.handle('ag:disableAll', h(() => disableAgAll()))
+  ipcMain.handle('ag:repair', h(() => repairAgService()))
+  ipcMain.handle('ag:setOwnProxy', h((proxyStr) => setAgOwnProxy(proxyStr as string)))
+  ipcMain.handle('ag:setGroupKey', h((groupKey) => setAgGroupKey(groupKey as string)))
+  ipcMain.handle(
+    'ag:setProvider',
+    h((name, enabled) => setAgProvider(name as string, Boolean(enabled)))
+  )
+  ipcMain.handle(
+    'ag:reorderProviders',
+    h((order) => reorderAgProviders(order as string[]))
+  )
+  ipcMain.handle('ag:addManualPath', h((dirPath) => addAgManualPath(dirPath as string)))
+  ipcMain.handle('ag:removeManualPath', h((dirPath) => removeAgManualPath(dirPath as string)))
+  ipcMain.handle('ag:logs', h(() => getAgLogs()))
+  ipcMain.handle('ag:pickFolder', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const result = win
+      ? await dialog.showOpenDialog(win, {
+          title: 'Выберите папку установки Antigravity',
+          properties: ['openDirectory']
+        })
+      : await dialog.showOpenDialog({
+          title: 'Выберите папку установки Antigravity',
+          properties: ['openDirectory']
+        })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
+  })
 
   // ---- Quit / restart -----------------------------------------------------
   ipcMain.handle('app:quit', h(() => app.quit()))

@@ -347,6 +347,180 @@ export const appInstallUpdate = (
 export const appDismissUpdate = (tag: string): Promise<void> =>
   invoke('app:dismissUpdate', tag)
 
+// ---- DNS-AI (Encrypted DoH for AI services) ---------------------------------
+export type DnsAiMode = 'stub' | 'native'
+
+export interface DnsAiSettings {
+  enabled: boolean
+  mode: DnsAiMode
+  ipv6: boolean
+  include_vpn_adapters: boolean
+  autostart_tray: boolean
+  service_autostart: boolean
+}
+
+export interface DnsAiAdapterView {
+  alias: string
+  index: number
+  current_v4: string
+  current_v6: string
+}
+
+export interface DnsAiStatus {
+  available: boolean
+  binaryPath: string
+  daemonRunning: boolean
+  serviceInstalled: boolean
+  serviceRunning: boolean
+  enabled: boolean
+  stubRunning: boolean
+  nativeSupported: boolean
+  serviceVersion: string
+  settings: DnsAiSettings
+  adapters: DnsAiAdapterView[]
+  endpoints: {
+    dohUrl: string
+    dotHost: string
+    ipv4: string[]
+    ipv6: string[]
+  }
+}
+
+export const dnsAiGetStatus = (): Promise<DnsAiStatus> => invoke('dnsAi:status')
+export const dnsAiEnable = (): Promise<DnsAiStatus> => invoke('dnsAi:enable')
+export const dnsAiDisable = (): Promise<DnsAiStatus> => invoke('dnsAi:disable')
+export const dnsAiSetSettings = (partial: Partial<DnsAiSettings>): Promise<DnsAiStatus> =>
+  invoke('dnsAi:setSettings', partial)
+export const dnsAiInstallService = (): Promise<DnsAiStatus> => invoke('dnsAi:installService')
+export const dnsAiUninstallService = (): Promise<DnsAiStatus> => invoke('dnsAi:uninstallService')
+export const dnsAiTestDoh = (
+  domain?: string,
+  qtype?: string
+): Promise<{ ok: boolean; output: string; latencyMs: number }> =>
+  invoke('dnsAi:testDoh', domain, qtype)
+
+// ---- Antigravity Unlocker ---------------------------------------------------
+export interface AgUnlockerSettings {
+  client_patch: boolean
+  auto_patch: boolean
+  group_key: string
+  license_key: string
+  group_key_at: number
+  own_proxy_at: number
+  patch_declined: boolean
+  dns: boolean
+  local_proxy: boolean
+  builtin_exits: boolean
+  group_proxy: boolean
+  disabled_providers: string[]
+  rotate_providers: boolean
+  provider_order: string[]
+  vpn_detect: boolean
+  verify_tls: boolean
+  own_proxy: string
+  own_proxy_enabled: boolean
+  manual_paths: string[]
+}
+
+export interface AgInstallRow {
+  label: string
+  path: string | null
+  patched: boolean | null
+  manual: boolean
+}
+
+export interface AgRouteEntry {
+  label: string
+  usable: boolean
+  latency_ms?: number
+  proven: boolean
+  ok_ago?: number
+  refused_ago?: number
+  answers: number
+  refusals: number
+  bench_left?: number
+  open: boolean
+}
+
+export interface AgBlockerEntry {
+  what: string
+  addr: string
+  cause: string
+  by?: string
+  error: string
+}
+
+export interface AgGateRecord {
+  at: number
+  route: string
+  forced_until: number
+  stood_down: boolean
+  last_400: {
+    at: number
+    count: number
+    acted: string
+    route: string
+    bypassed: boolean
+  } | null
+  last_ok: {
+    at: number
+    route: string
+  } | null
+  loopback: boolean
+  tunnel: boolean
+  vpn_exit: string
+  routes: AgRouteEntry[]
+  version: number
+  blockers: AgBlockerEntry[]
+  reached_at: number
+  started_at: number
+  exe: string
+}
+
+export interface AgUnlockerStatus {
+  binaryAvailable: boolean
+  installedExePath: string
+  relayInstalled: boolean
+  relayRunning: boolean
+  watchdogInstalled: boolean
+  nrptApplied: boolean
+  proxyEnvSet: boolean
+  proxyUrl: string
+  pcCode: string
+  settings: AgUnlockerSettings
+  installs: AgInstallRow[]
+  gate: AgGateRecord | null
+  providers: Array<{ name: string; enabled: boolean }>
+}
+
+export const agGetStatus = (deep = false): Promise<AgUnlockerStatus> => invoke('ag:status', deep)
+export const agPatchInstall = (
+  targetPath?: string
+): Promise<{ ok: boolean; patched: string[]; errors: string[] }> => invoke('ag:patch', targetPath)
+export const agUnpatchInstall = (
+  targetPath?: string
+): Promise<{ ok: boolean; unpatched: string[]; errors: string[] }> =>
+  invoke('ag:unpatch', targetPath)
+export const agSetCapability = (cap: string, enabled: boolean): Promise<AgUnlockerStatus> =>
+  invoke('ag:setCap', cap, enabled)
+export const agEnableAll = (): Promise<AgUnlockerStatus> => invoke('ag:enableAll')
+export const agDisableAll = (): Promise<AgUnlockerStatus> => invoke('ag:disableAll')
+export const agRepairService = (): Promise<AgUnlockerStatus> => invoke('ag:repair')
+export const agSetOwnProxy = (proxyStr: string): Promise<AgUnlockerStatus> =>
+  invoke('ag:setOwnProxy', proxyStr)
+export const agSetGroupKey = (groupKey: string): Promise<AgUnlockerStatus> =>
+  invoke('ag:setGroupKey', groupKey)
+export const agSetProvider = (name: string, enabled: boolean): Promise<AgUnlockerStatus> =>
+  invoke('ag:setProvider', name, enabled)
+export const agReorderProviders = (order: string[]): Promise<AgUnlockerStatus> =>
+  invoke('ag:reorderProviders', order)
+export const agAddManualPath = (dirPath: string): Promise<AgUnlockerStatus> =>
+  invoke('ag:addManualPath', dirPath)
+export const agRemoveManualPath = (dirPath: string): Promise<AgUnlockerStatus> =>
+  invoke('ag:removeManualPath', dirPath)
+export const agGetLogs = (): Promise<{ forwarder: string; watchdog: string }> => invoke('ag:logs')
+export const agPickFolder = (): Promise<string | null> => invoke('ag:pickFolder')
+
 // ---- App control ------------------------------------------------------------
 export const appQuit = (): Promise<void> => invoke('app:quit')
 export const appRelaunch = (): Promise<void> => invoke('app:relaunch')

@@ -106,3 +106,15 @@ export function zapretBundleDir(): string {
 export function zapretBinaryPath(): string {
   return path.join(zapretBundleDir(), 'bin', 'winws.exe')
 }
+
+export function dnsAiBinaryPath(): string {
+  return path.join(resourcesDir(), 'dns-ai', 'DNS-AI.exe')
+}
+
+export function dnsAiEndpointsPath(): string {
+  return path.join(resourcesDir(), 'dns-ai', 'endpoints.json')
+}
+
+export function agUnlockerBinaryPath(): string {
+  return path.join(resourcesDir(), 'ag-unlocker', 'AG_2.21.1.exe')
+}
