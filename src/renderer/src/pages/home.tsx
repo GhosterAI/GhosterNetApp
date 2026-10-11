@@ -17,7 +17,7 @@ import {
   zapretStart, zapretStop, zapretRestart,
   psiphonStart, psiphonStop, psiphonRestart,
   psiphonSetSystemProxy,
-  vpnStop, vpnRestart,
+  vpnStart, vpnStop, vpnRestart,
   zapretCheckUpdate, tgwsCheckUpdate,
   dnsAiCheckUpdate, agCheckUpdate,
   profilesSwitch,
@@ -168,8 +168,8 @@ const PowerToggle: React.FC<PowerToggleProps> = ({
       </div>
 
       {version && (
-        <div className="mt-1 text-[11px] text-foreground/60 text-center tabular-nums">
-          v{version}
+        <div className="mt-1 text-[11px] text-foreground/60 text-center tabular-nums truncate max-w-[170px]">
+          {/^\d/.test(version) ? `v${version}` : version}
         </div>
       )}
 
@@ -294,6 +294,23 @@ const Home: React.FC = () => {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       toast.error(next ? 'Не удалось запустить Psiphon' : 'Не удалось остановить Psiphon', {
+        description: msg
+      })
+    }
+  }
+
+  const toggleVpn = async (next: boolean): Promise<void> => {
+    const hasServers = Boolean(appConfig?.vpn?.servers && appConfig.vpn.servers.length > 0)
+    if (next && !hasServers && !appConfig?.vpn?.selectedServerId) {
+      navigate('/vpn')
+      return
+    }
+    try {
+      if (next) await vpnStart()
+      else await vpnStop()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      toast.error(next ? 'Не удалось запустить VPN' : 'Не удалось остановить VPN', {
         description: msg
       })
     }
@@ -427,7 +444,7 @@ const Home: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 flex-1 items-center max-w-5xl mx-auto w-full">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 px-4 flex-1 items-center max-w-6xl mx-auto w-full">
           <PowerToggle
             label="Zapret"
             status={zapret}
@@ -445,6 +462,18 @@ const Home: React.FC = () => {
             status={tgws}
             onToggle={toggleTgws}
             version={appConfig?.tgws?.installedVersion ?? tgwsUpdate?.installed ?? BUNDLED_TGWS_VERSION}
+          />
+          <PowerToggle
+            label="VPN"
+            status={vpn}
+            onToggle={toggleVpn}
+            version={
+              vpn.activeServer
+                ? `${vpn.activeServer.name}`
+                : appConfig?.vpn?.servers?.length
+                  ? `${appConfig.vpn.servers.length} серв.`
+                  : 'sing-box'
+            }
           />
           <PowerToggle
             label="Psiphon VPN"

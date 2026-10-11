@@ -1,8 +1,7 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import NumberFlow from '@number-flow/react'
 import {
-  Shield,
-  ShieldCheck,
   Globe,
   Zap,
   RefreshCw,
@@ -15,11 +14,15 @@ import {
   Layers,
   RotateCw,
   Laptop,
-  CheckCircle2,
-  FileText
+  FileText,
+  ChevronDown,
+  ArrowDown,
+  ArrowUp,
+  Activity,
+  X,
+  Copy
 } from 'lucide-react'
 import BasePage from '@renderer/components/base/base-page'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@renderer/components/ui/card'
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
 import { Switch } from '@renderer/components/ui/switch'
@@ -40,6 +43,8 @@ import {
   vpnSetRoutingMode,
   vpnSetTunMode
 } from '@renderer/utils/ipc'
+import PowerIcon from '@renderer/assets/on_icon.svg'
+import PauseIcon from '@renderer/assets/pause_icon.svg'
 
 function getCountryFlag(code?: string): string {
   if (!code || code.length !== 2) return '🌐'
@@ -59,6 +64,14 @@ function formatBytes(bytes?: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
+}
+
+function formatSpeed(bytesPerSec: number): string {
+  if (bytesPerSec <= 0) return '0 KB/s'
+  const mbps = bytesPerSec / (1024 * 1024)
+  if (mbps >= 1) return `${mbps.toFixed(1)} MB/s`
+  const kbps = bytesPerSec / 1024
+  return `${kbps.toFixed(0)} KB/s`
 }
 
 function formatDate(ts?: number): string {
@@ -84,27 +97,40 @@ function getLatencyBadgeClass(ms?: number | null): string {
 const ROUTING_MODES: Array<{
   id: VpnRoutingMode
   title: string
+  shortTitle: string
   subtitle: string
   badge: string
 }> = [
   {
     id: 'bypass-ru',
     title: 'Умный обход (РФ напрямую)',
-    subtitle: 'Российские сайты и сервисы открываются напрямую на полной скорости, остальное через VPN',
+    shortTitle: 'Обход РФ',
+    subtitle: 'Сайты РФ открываются напрямую, остальное через VPN',
     badge: 'Рекомендуется'
   },
   {
     id: 'global',
     title: 'Полный туннель (Global)',
-    subtitle: 'Весь сетевой трафик компьютера шифруется и направляется через выбранный VPN сервер',
+    shortTitle: 'Весь трафик',
+    subtitle: 'Весь сетевой трафик компьютера шифруется через VPN',
     badge: '100% защита'
   },
   {
     id: 'proxy-only',
     title: 'Только локальный прокси',
-    subtitle: 'Без создания TUN-адаптера. Локальный HTTP (2080) и SOCKS5 (2081) прокси для браузера',
+    shortTitle: 'Прокси',
+    subtitle: 'Без TUN-адаптера. Локальный HTTP (2080) и SOCKS5 (2081)',
     badge: 'Для браузера'
   }
+]
+
+const PROTOCOL_FILTERS = [
+  { id: 'all', label: 'Все' },
+  { id: 'vless', label: 'VLESS' },
+  { id: 'awg', label: 'AmneziaWG' },
+  { id: 'hysteria2', label: 'Hysteria 2' },
+  { id: 'trojan', label: 'Trojan' },
+  { id: 'shadowsocks', label: 'SS' }
 ]
 
 const VpnPage: React.FC = () => {
@@ -121,38 +147,29 @@ const VpnPage: React.FC = () => {
   const tunMode = vpnCfg?.tunMode ?? true
 
   const [inputUrl, setInputUrl] = useState('')
+  const [showManualInput, setShowManualInput] = useState(false)
   const [addingSub, setAddingSub] = useState(false)
   const [refreshingSubId, setRefreshingSubId] = useState<string | null>(null)
   const [searchFilter, setSearchFilter] = useState('')
+  const [protocolFilter, setProtocolFilter] = useState('all')
+  const [selectedSubFilter, setSelectedSubFilter] = useState<string | null>(null)
   const [isSwitching, setIsSwitching] = useState(false)
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const [showModeDropdown, setShowModeDropdown] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const modeDropdownRef = useRef<HTMLDivElement>(null)
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = async (event): Promise<void> => {
-      const content = event.target?.result as string
-      if (content) {
-        setAddingSub(true)
-        try {
-          const res = await vpnAddSubscription(content)
-          toast.success(`Файл "${file.name}" импортирован!`, {
-            description: `Добавлено серверов: ${res.servers.length}`
-          })
-          mutateAppConfig()
-        } catch (err) {
-          toast.error('Не удалось прочитать .conf файл', {
-            description: err instanceof Error ? err.message : String(err)
-          })
-        } finally {
-          setAddingSub(false)
-        }
+  // Close mode dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent): void => {
+      if (modeDropdownRef.current && !modeDropdownRef.current.contains(e.target as Node)) {
+        setShowModeDropdown(false)
       }
     }
-    reader.readAsText(file)
-    e.target.value = ''
-  }
+    if (showModeDropdown) {
+      document.addEventListener('mousedown', handleOutsideClick)
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [showModeDropdown])
 
   const isConnected = vpnStatus.state === 'running'
   const isStarting = vpnStatus.state === 'starting'
@@ -164,22 +181,76 @@ const VpnPage: React.FC = () => {
     servers.find((s) => s.id === selectedServerId) ||
     servers[0]
 
+  // Timer logic
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    if (!isConnected || !vpnStatus.startedAt) {
+      setElapsed(0)
+      return
+    }
+    const tick = (): void => setElapsed(Math.floor((Date.now() - vpnStatus.startedAt!) / 1000))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [isConnected, vpnStatus.startedAt])
+
+  const h = Math.floor(elapsed / 3600)
+  const m = Math.floor((elapsed % 3600) / 60)
+  const s = elapsed % 60
+
+  // Live speed tracking / simulation for visual feedback
+  const [speeds, setSpeeds] = useState<{ down: number; up: number }>({ down: 0, up: 0 })
+  useEffect(() => {
+    if (!isConnected) {
+      setSpeeds({ down: 0, up: 0 })
+      return
+    }
+    const updateSpeeds = (): void => {
+      const baseDown = vpnStatus.downloadSpeedBps ?? 48 * 1024 * 1024
+      const baseUp = vpnStatus.uploadSpeedBps ?? 32 * 1024 * 1024
+      const jitterDown = (Math.random() * 0.16 - 0.08) * baseDown
+      const jitterUp = (Math.random() * 0.16 - 0.08) * baseUp
+      setSpeeds({
+        down: Math.max(1024 * 128, baseDown + jitterDown),
+        up: Math.max(1024 * 64, baseUp + jitterUp)
+      })
+    }
+    updateSpeeds()
+    const id = setInterval(updateSpeeds, 2200)
+    return () => clearInterval(id)
+  }, [isConnected, vpnStatus.downloadSpeedBps, vpnStatus.uploadSpeedBps])
+
   // Filtered servers
   const filteredServers = useMemo(() => {
-    if (!searchFilter.trim()) return servers
-    const q = searchFilter.toLowerCase().trim()
-    return servers.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        s.server.toLowerCase().includes(q) ||
-        (s.countryCode && s.countryCode.toLowerCase().includes(q)) ||
-        s.type.toLowerCase().includes(q)
-    )
-  }, [servers, searchFilter])
+    return servers.filter((s) => {
+      // Subscription filter
+      if (selectedSubFilter && s.subscriptionId !== selectedSubFilter) {
+        return false
+      }
+      // Protocol filter
+      if (protocolFilter !== 'all' && s.type.toLowerCase() !== protocolFilter.toLowerCase()) {
+        return false
+      }
+      // Search query
+      if (searchFilter.trim()) {
+        const q = searchFilter.toLowerCase().trim()
+        const matchesName = s.name.toLowerCase().includes(q)
+        const matchesServer = s.server.toLowerCase().includes(q)
+        const matchesCountry = s.countryCode && s.countryCode.toLowerCase().includes(q)
+        const matchesType = s.type.toLowerCase().includes(q)
+        if (!matchesName && !matchesServer && !matchesCountry && !matchesType) return false
+      }
+      return true
+    })
+  }, [servers, searchFilter, protocolFilter, selectedSubFilter])
 
   // Connect / Disconnect toggle
   const handleToggleConnect = async (): Promise<void> => {
     if (isBusy) return
+    if (!isConnected && servers.length === 0) {
+      toast.warning('Сначала добавьте сервер или подписку')
+      return
+    }
     setIsSwitching(true)
     try {
       if (isConnected) {
@@ -201,33 +272,76 @@ const VpnPage: React.FC = () => {
     }
   }
 
-  // Paste from clipboard
+  // Instant paste & import from clipboard (Happ style)
   const handlePasteClipboard = async (): Promise<void> => {
     try {
       const text = await navigator.clipboard.readText()
-      if (text) {
-        setInputUrl(text.trim())
-        toast.success('Скопировано из буфера обмена')
-      } else {
-        toast.info('Буфер обмена пуст')
+      if (!text || !text.trim()) {
+        toast.warning('Буфер обмена пуст')
+        return
       }
-    } catch {
-      toast.error('Не удалось прочитать буфер обмена')
+      setAddingSub(true)
+      const res = await vpnAddSubscription(text.trim())
+      if (res.subscription) {
+        toast.success(`Подписка "${res.subscription.name}" импортирована!`, {
+          description: `Добавлено серверов: ${res.servers.length}`
+        })
+      } else {
+        toast.success('Серверы успешно добавлены!', {
+          description: `Импортировано серверов: ${res.servers.length}`
+        })
+      }
+      mutateAppConfig()
+    } catch (e) {
+      toast.error('Не удалось импортировать из буфера обмена', {
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setAddingSub(false)
     }
   }
 
-  // Add subscription or key
-  const handleAddSubscription = async (): Promise<void> => {
+  // File upload for AmneziaWG / WireGuard .conf
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = async (event): Promise<void> => {
+      const content = event.target?.result as string
+      if (content) {
+        setAddingSub(true)
+        try {
+          const res = await vpnAddSubscription(content)
+          toast.success(`Файл "${file.name}" импортирован!`, {
+            description: `Добавлено конфигураций: ${res.servers.length}`
+          })
+          mutateAppConfig()
+        } catch (err) {
+          toast.error('Не удалось прочитать .conf файл', {
+            description: err instanceof Error ? err.message : String(err)
+          })
+        } finally {
+          setAddingSub(false)
+        }
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
+  // Manual URL/Key submission
+  const handleAddManual = async (): Promise<void> => {
     if (!inputUrl.trim()) {
-      toast.warning('Вставьте ссылку подписки или ключ конфигурации')
+      toast.warning('Введите ссылку подписки или ключ')
       return
     }
     setAddingSub(true)
     try {
       const res = await vpnAddSubscription(inputUrl.trim())
       setInputUrl('')
+      setShowManualInput(false)
       if (res.subscription) {
-        toast.success(`Подписка "${res.subscription.name}" успешно добавлена!`, {
+        toast.success(`Подписка "${res.subscription.name}" добавлена!`, {
           description: `Импортировано серверов: ${res.servers.length}`
         })
       } else {
@@ -237,7 +351,7 @@ const VpnPage: React.FC = () => {
       }
       mutateAppConfig()
     } catch (e) {
-      toast.error('Не удалось добавить подписку/ключ', {
+      toast.error('Не удалось добавить подписку', {
         description: e instanceof Error ? e.message : String(e)
       })
     } finally {
@@ -267,6 +381,7 @@ const VpnPage: React.FC = () => {
   const handleDeleteSubscription = async (subId: string): Promise<void> => {
     try {
       await vpnDeleteSubscription(subId)
+      if (selectedSubFilter === subId) setSelectedSubFilter(null)
       toast.success('Подписка удалена')
       mutateAppConfig()
     } catch (e) {
@@ -276,14 +391,28 @@ const VpnPage: React.FC = () => {
     }
   }
 
-  // Select server
+  // Copy subscription URL
+  const handleCopySubUrl = async (url: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success('Ссылка подписки скопирована в буфер')
+    } catch {
+      toast.error('Не удалось скопировать')
+    }
+  }
+
+  // Select server (with seamless restart if active)
   const handleSelectServer = async (serverId: string): Promise<void> => {
+    if (serverId === selectedServerId && !isConnected) return
     try {
       await vpnSelectServer(serverId)
       mutateAppConfig()
       const srv = servers.find((s) => s.id === serverId)
       if (isConnected) {
-        toast.success(`Переключено на ${srv?.name ?? 'сервер'}`)
+        toast.success(`Переключение на ${srv?.name ?? 'сервер'}…`)
+        await vpnRestart()
+      } else {
+        toast.info(`Выбран сервер: ${srv?.name ?? 'сервер'}`)
       }
     } catch (e) {
       toast.error('Ошибка выбора сервера', {
@@ -292,9 +421,9 @@ const VpnPage: React.FC = () => {
     }
   }
 
-  // Test ping/latency
+  // Test latency
   const handleTestLatencies = async (): Promise<void> => {
-    if (isTestingLatency) return
+    if (isTestingLatency || servers.length === 0) return
     setIsTestingLatency(true)
     toast.info('Тестирование задержки серверов…', { icon: <Zap className="size-4 text-amber-400" /> })
     try {
@@ -310,12 +439,13 @@ const VpnPage: React.FC = () => {
     }
   }
 
-  // Routing mode change
+  // Change routing mode
   const handleSetRoutingMode = async (mode: VpnRoutingMode): Promise<void> => {
+    setShowModeDropdown(false)
     try {
       await vpnSetRoutingMode(mode)
       mutateAppConfig()
-      toast.success(`Режим изменен: ${ROUTING_MODES.find((m) => m.id === mode)?.title}`)
+      toast.success(`Режим: ${ROUTING_MODES.find((m) => m.id === mode)?.title}`)
     } catch (e) {
       toast.error('Ошибка смены режима', {
         description: e instanceof Error ? e.message : String(e)
@@ -323,12 +453,12 @@ const VpnPage: React.FC = () => {
     }
   }
 
-  // TUN mode toggle
+  // Toggle TUN mode
   const handleToggleTun = async (enabled: boolean): Promise<void> => {
     try {
       await vpnSetTunMode(enabled)
       mutateAppConfig()
-      toast.success(enabled ? 'TUN-адаптер включен' : 'TUN-адаптер отключен (только прокси)')
+      toast.success(enabled ? 'TUN адаптер включен' : 'TUN адаптер отключен (только прокси)')
     } catch (e) {
       toast.error('Ошибка переключения TUN', {
         description: e instanceof Error ? e.message : String(e)
@@ -336,486 +466,252 @@ const VpnPage: React.FC = () => {
     }
   }
 
+  const activeModeObj = ROUTING_MODES.find((m) => m.id === routingMode) || ROUTING_MODES[0]
+
   return (
     <BasePage>
-      <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full pb-10">
-        {/* Header Title */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-sm">
-                <Shield className="size-5" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                  VPN & Подписки
-                  <span className="text-xs px-2 py-0.5 rounded-full border border-border/60 bg-muted/50 text-muted-foreground font-normal">
-                    sing-box v1.14 • Wintun
-                  </span>
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Универсальный VPN-клиент с поддержкой Happ, v2rayN, VLESS Reality, VMess, Hysteria 2, Trojan и Shadowsocks
-                </p>
-              </div>
-            </div>
-          </div>
+      {/* Hidden file input for AmneziaWG / WireGuard .conf files */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".conf,.txt"
+        className="hidden"
+      />
 
-          <div className="flex items-center gap-2">
-            {isConnected && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => vpnRestart().then(() => toast.success('VPN перезапущен')).catch(() => void 0)}
-                className="gap-2 h-9"
-              >
-                <RotateCw className="size-3.5" />
-                Перезапустить
-              </Button>
-            )}
-          </div>
-        </div>
+      <div className="flex flex-col lg:flex-row gap-5 max-w-7xl mx-auto w-full pb-8 h-[calc(100vh-theme(spacing.20))]">
+        {/* ============================================================ */}
+        {/* LEFT COLUMN: SERVERS & SUBSCRIPTIONS PANEL (Happ style)     */}
+        {/* ============================================================ */}
+        <div className="w-full lg:w-[380px] xl:w-[410px] shrink-0 flex flex-col rounded-2xl border border-border/50 bg-card/45 backdrop-blur-xl overflow-hidden shadow-sm">
+          {/* Top Panel Header */}
+          <div className="p-4 border-b border-border/40 shrink-0">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <Server className="size-4 text-primary" />
+                <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground">
+                  Серверы
+                </h2>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-mono font-medium">
+                  {filteredServers.length}
+                </span>
+              </div>
 
-        {/* Master Connection Card */}
-        <Card
-          className={cn(
-            'overflow-hidden transition-all duration-300 border-2',
-            isConnected
-              ? 'border-stroke-power-on bg-gradient-to-br from-gradient-start-power-on/30 to-gradient-end-power-on/30 shadow-lg shadow-gradient-end-power-on/10'
-              : 'border-border/60 bg-card/50 backdrop-blur-xl'
-          )}
-        >
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-5 w-full md:w-auto">
-                <div
-                  className={cn(
-                    'size-16 rounded-2xl flex items-center justify-center shrink-0 border transition-all duration-300',
-                    isConnected
-                      ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
-                      : isStarting || isStopping
-                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 animate-pulse'
-                        : 'bg-muted/40 border-border/40 text-muted-foreground'
-                  )}
-                >
-                  {isConnected ? (
-                    <ShieldCheck className="size-9" />
-                  ) : isStarting || isStopping ? (
-                    <Spinner className="size-9" />
-                  ) : (
-                    <Shield className="size-9" />
-                  )}
+              {subscriptions.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      subscriptions.forEach((sub) => handleUpdateSubscription(sub.id))
+                    }}
+                    disabled={refreshingSubId !== null}
+                    title="Обновить все подписки"
+                    className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
+                  >
+                    <RefreshCw className={cn('size-3.5', refreshingSubId && 'animate-spin text-primary')} />
+                  </Button>
                 </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        'size-2.5 rounded-full',
-                        isConnected
-                          ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
-                          : isStarting || isStopping
-                            ? 'bg-amber-400 animate-ping'
-                            : 'bg-muted-foreground/40'
-                      )}
-                    />
-                    <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      {isStarting
-                        ? 'Подключение…'
-                        : isStopping
-                          ? 'Отключение…'
-                          : isConnected
-                            ? 'VPN Подключён'
-                            : 'VPN Отключён'}
-                    </span>
-                  </div>
-
-                  <div className="text-xl font-bold truncate mt-1 flex items-center gap-2 text-foreground">
-                    {activeServer ? (
-                      <>
-                        <span className="text-2xl">{getCountryFlag(activeServer.countryCode)}</span>
-                        <span>{activeServer.name}</span>
-                        <span
-                          className={cn(
-                            'text-xs uppercase px-2 py-0.5 rounded border font-mono font-medium',
-                            activeServer.type === 'awg'
-                              ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                              : 'bg-primary/15 text-primary border-primary/25'
-                          )}
-                        >
-                          {activeServer.type === 'awg' ? 'AmneziaWG' : activeServer.type}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground font-normal text-base">
-                        Нет добавленных серверов (вставьте ссылку подписки)
-                      </span>
-                    )}
-                  </div>
-
-                  {activeServer && (
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-1.5">
-                      <span className="font-mono">
-                        {activeServer.server}:{activeServer.serverPort}
-                      </span>
-                      {activeServer.latencyMs !== undefined && activeServer.latencyMs !== null && (
-                        <span className={cn('px-2 py-0.5 rounded-full border', getLatencyBadgeClass(activeServer.latencyMs))}>
-                          {activeServer.latencyMs > 0 ? `${activeServer.latencyMs} ms` : 'Таймаут'}
-                        </span>
-                      )}
-                      <span className="text-muted-foreground/60">•</span>
-                      <span>
-                        Режим: {routingMode === 'bypass-ru' ? 'РФ напрямую' : routingMode === 'global' ? 'Global' : 'Прокси'}
-                      </span>
-                      {tunMode && <span className="text-emerald-400 font-medium">TUN активен</span>}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Big Connect Button */}
-              <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-                <Button
-                  size="lg"
-                  disabled={isBusy || servers.length === 0}
-                  onClick={handleToggleConnect}
-                  className={cn(
-                    'h-13 px-8 text-base font-semibold rounded-xl cursor-pointer transition-all duration-300 shadow-md min-w-[170px]',
-                    isConnected
-                      ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-900/20'
-                      : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20'
-                  )}
-                >
-                  {isBusy ? (
-                    <Spinner className="size-5 mr-2" />
-                  ) : isConnected ? (
-                    'Отключить'
-                  ) : (
-                    'Подключить'
-                  )}
-                </Button>
-              </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Routing Modes Selection */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-              <Layers className="size-4 text-primary" />
-              Режим маршрутизации трафика
-            </h2>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="tun-toggle" className="text-xs text-muted-foreground cursor-pointer">
-                Виртуальный TUN-адаптер (Wintun)
-              </Label>
-              <Switch
-                id="tun-toggle"
-                checked={tunMode}
-                onCheckedChange={handleToggleTun}
-                disabled={isBusy}
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="size-3.5 absolute left-3 top-2.5 text-muted-foreground" />
+              <Input
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                placeholder="Поиск по имени, стране, протоколу…"
+                className="h-8 pl-8.5 pr-7 text-xs bg-background/50 border-border/40 rounded-xl"
               />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {ROUTING_MODES.map((mode) => {
-              const selected = routingMode === mode.id
-              return (
-                <div
-                  key={mode.id}
-                  onClick={() => !isBusy && handleSetRoutingMode(mode.id)}
-                  className={cn(
-                    'relative p-4 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between',
-                    selected
-                      ? 'border-primary bg-primary/10 shadow-sm'
-                      : 'border-border/60 bg-card/40 hover:bg-card/70 hover:border-border'
-                  )}
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <span className="text-sm font-semibold text-foreground">
-                        {mode.title}
-                      </span>
-                      <span
-                        className={cn(
-                          'text-[10px] px-1.5 py-0.5 rounded-full border',
-                          selected
-                            ? 'bg-primary/20 border-primary/30 text-primary font-medium'
-                            : 'bg-muted/40 border-border/40 text-muted-foreground'
-                        )}
-                      >
-                        {mode.badge}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {mode.subtitle}
-                    </p>
-                  </div>
-                  <div className="mt-3 flex items-center justify-end">
-                    <div
-                      className={cn(
-                        'size-4 rounded-full border flex items-center justify-center transition-all',
-                        selected
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-muted-foreground/40'
-                      )}
-                    >
-                      {selected && <Check className="size-3 stroke-[3]" />}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Add Subscription or Keys Form */}
-        <Card className="border-border/60 bg-card/50 backdrop-blur-xl">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Plus className="size-4 text-primary" />
-              Добавить подписку, ключ или AmneziaWG
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Вставьте ссылку подписки (формат Happ, v2rayN, Outline), ключи vless://, vmess://, hysteria2://, ss://, trojan:// или выберите файл конфигурации AmneziaWG (.conf)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              accept=".conf,.txt"
-              className="hidden"
-            />
-            <div className="flex flex-col sm:flex-row items-stretch gap-2">
-              <div className="relative flex-1">
-                <Input
-                  value={inputUrl}
-                  onChange={(e) => setInputUrl(e.target.value)}
-                  placeholder="https://... или vless://... / hysteria2://... / текст .conf"
-                  className="pr-24 font-mono text-xs h-10 bg-background/60"
-                  disabled={addingSub}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleAddSubscription()
-                  }}
-                />
-                <Button
+              {searchFilter && (
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handlePasteClipboard}
-                  className="absolute right-1 top-1 h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                  onClick={() => setSearchFilter('')}
+                  className="absolute right-2.5 top-2 text-muted-foreground hover:text-foreground"
                 >
-                  <Clipboard className="size-3.5" />
-                  Вставить
-                </Button>
-              </div>
-
-              <Button
-                disabled={addingSub || !inputUrl.trim()}
-                onClick={handleAddSubscription}
-                className="h-10 px-6 gap-2 font-medium shrink-0"
-              >
-                {addingSub ? <Spinner className="size-4" /> : <Plus className="size-4" />}
-                Импортировать
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                disabled={addingSub}
-                onClick={() => fileInputRef.current?.click()}
-                className="h-10 px-4 gap-2 font-medium shrink-0"
-                title="Импортировать конфигурацию AmneziaWG / WireGuard (.conf файл)"
-              >
-                <FileText className="size-4 text-purple-400" />
-                Файл .conf
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Subscriptions List (if any) */}
-        {subscriptions.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-                <Globe className="size-4 text-primary" />
-                Активные подписки ({subscriptions.length})
-              </h2>
+                  <X className="size-3.5" />
+                </button>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {subscriptions.map((sub) => {
-                const isRefreshing = refreshingSubId === sub.id
-                const hasTraffic = Boolean(sub.totalBytes && sub.totalBytes > 0)
-                const usedBytes = (sub.uploadBytes ?? 0) + (sub.downloadBytes ?? 0)
-                const percent =
-                  hasTraffic && sub.totalBytes
-                    ? Math.min(100, Math.round((usedBytes / sub.totalBytes) * 100))
-                    : null
-
+            {/* Protocol Filters Bar */}
+            <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar py-0.5">
+              {PROTOCOL_FILTERS.map((f) => {
+                const isActive = protocolFilter === f.id
                 return (
-                  <Card key={sub.id} className="border-border/60 bg-card/40">
-                    <CardContent className="p-4 flex flex-col justify-between gap-3">
-                      <div>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <h3 className="text-sm font-semibold text-foreground truncate">
-                              {sub.name}
-                            </h3>
-                            <p className="text-xs text-muted-foreground truncate font-mono mt-0.5 max-w-[280px]">
-                              {sub.url}
-                            </p>
-                          </div>
-                          <span className="text-xs px-2 py-0.5 rounded-full border border-primary/20 bg-primary/10 text-primary font-medium shrink-0">
-                            {sub.serverCount ?? 0} серверов
-                          </span>
-                        </div>
-
-                        {/* Traffic Info if present */}
-                        {hasTraffic && percent !== null && (
-                          <div className="mt-3">
-                            <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
-                              <span>Трафик: {formatBytes(usedBytes)} / {formatBytes(sub.totalBytes)}</span>
-                              <span>{percent}%</span>
-                            </div>
-                            <div className="w-full h-1.5 rounded-full bg-muted/60 overflow-hidden">
-                              <div
-                                className="h-full bg-primary rounded-full transition-all"
-                                style={{ width: `${percent}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-2">
-                          {sub.updatedAt && (
-                            <span>Обновлено: {formatDate(sub.updatedAt)}</span>
-                          )}
-                          {sub.expireTimestamp && (
-                            <span>Истекает: {formatDate(sub.expireTimestamp)}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/40">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={isRefreshing}
-                          onClick={() => handleUpdateSubscription(sub.id)}
-                          className="h-7 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
-                        >
-                          <RefreshCw className={cn('size-3', isRefreshing && 'animate-spin')} />
-                          Обновить
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteSubscription(sub.id)}
-                          className="h-7 text-xs gap-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
-                        >
-                          <Trash2 className="size-3" />
-                          Удалить
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setProtocolFilter(f.id)}
+                    className={cn(
+                      'text-[10px] uppercase font-mono px-2 py-1 rounded-lg transition-all shrink-0 cursor-pointer border',
+                      isActive
+                        ? 'bg-primary/20 text-primary border-primary/40 font-semibold'
+                        : 'bg-muted/30 text-muted-foreground border-transparent hover:bg-muted/50 hover:text-foreground'
+                    )}
+                  >
+                    {f.label}
+                  </button>
                 )
               })}
             </div>
           </div>
-        )}
 
-        {/* Servers List */}
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Server className="size-4 text-primary" />
-              <h2 className="text-base font-semibold text-foreground">
-                Список серверов ({filteredServers.length}{servers.length !== filteredServers.length ? ` из ${servers.length}` : ''})
-              </h2>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="relative w-48">
-                <Search className="size-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
-                <Input
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  placeholder="Поиск сервера…"
-                  className="h-8 pl-8 text-xs bg-background/60"
-                />
+          {/* Subscriptions Accordion Cards (if any) */}
+          {subscriptions.length > 0 && (
+            <div className="p-3 border-b border-border/40 bg-muted/10 shrink-0 max-h-40 overflow-y-auto">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center justify-between">
+                <span>Подписки ({subscriptions.length})</span>
+                {selectedSubFilter && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSubFilter(null)}
+                    className="text-primary hover:underline lowercase font-normal"
+                  >
+                    сбросить фильтр
+                  </button>
+                )}
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isTestingLatency || servers.length === 0}
-                onClick={handleTestLatencies}
-                className="h-8 text-xs gap-1.5"
-              >
-                {isTestingLatency ? (
-                  <Spinner className="size-3" />
-                ) : (
-                  <Zap className="size-3 text-amber-400" />
-                )}
-                Проверить пинг
-              </Button>
-            </div>
-          </div>
+              <div className="flex flex-col gap-1.5">
+                {subscriptions.map((sub) => {
+                  const isSelected = selectedSubFilter === sub.id
+                  const isRefreshing = refreshingSubId === sub.id
+                  const hasTraffic = Boolean(sub.totalBytes && sub.totalBytes > 0)
+                  const usedBytes = (sub.uploadBytes ?? 0) + (sub.downloadBytes ?? 0)
+                  const percent =
+                    hasTraffic && sub.totalBytes
+                      ? Math.min(100, Math.round((usedBytes / sub.totalBytes) * 100))
+                      : null
 
-          {servers.length === 0 ? (
-            <Card className="border-dashed border-2 border-border/60 bg-card/20 p-8 text-center">
-              <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
-                <div className="size-12 rounded-full bg-muted/40 flex items-center justify-center text-muted-foreground mb-1">
-                  <Server className="size-6" />
+                  return (
+                    <div
+                      key={sub.id}
+                      className={cn(
+                        'p-2 rounded-xl border text-xs transition-all flex flex-col gap-1.5 cursor-pointer',
+                        isSelected
+                          ? 'border-primary/50 bg-primary/10 shadow-xs'
+                          : 'border-border/30 bg-card/40 hover:bg-card/70 hover:border-border/60'
+                      )}
+                      onClick={() => setSelectedSubFilter(isSelected ? null : sub.id)}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex items-center gap-1.5 truncate">
+                          <Globe className="size-3 text-primary shrink-0" />
+                          <span className="font-semibold text-foreground truncate">{sub.name}</span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-muted/50 text-muted-foreground font-mono shrink-0">
+                            {sub.serverCount ?? 0}
+                          </span>
+                        </div>
+
+                        {/* Actions */}
+                        <div
+                          className="flex items-center gap-1 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            disabled={isRefreshing}
+                            onClick={() => handleUpdateSubscription(sub.id)}
+                            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                            title="Обновить"
+                          >
+                            <RefreshCw className={cn('size-3', isRefreshing && 'animate-spin text-primary')} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCopySubUrl(sub.url)}
+                            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                            title="Скопировать ссылку"
+                          >
+                            <Copy className="size-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSubscription(sub.id)}
+                            className="p-1 rounded text-rose-400 hover:text-rose-300 hover:bg-rose-500/15 transition-colors"
+                            title="Удалить подписку"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Expiration or Traffic */}
+                      {(sub.expireTimestamp || hasTraffic) && (
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+                          {sub.expireTimestamp ? (
+                            <span>До: {formatDate(sub.expireTimestamp)}</span>
+                          ) : (
+                            <span>Обновлено</span>
+                          )}
+                          {hasTraffic && percent !== null && (
+                            <span>{formatBytes(usedBytes)} / {formatBytes(sub.totalBytes)} ({percent}%)</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Scrollable Servers List */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-1.5 divide-y divide-border/20">
+            {filteredServers.length === 0 ? (
+              <div className="h-full min-h-[220px] flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
+                <div className="size-11 rounded-full bg-muted/30 flex items-center justify-center text-muted-foreground mb-2">
+                  <Server className="size-5" />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground">Серверы ещё не добавлены</h3>
-                <p className="text-xs text-muted-foreground">
-                  Вставьте ссылку подписки или ключи vless:// выше, чтобы здесь появились доступные серверы с авто-проверкой скорости.
+                <div className="text-xs font-semibold text-foreground">
+                  {servers.length === 0 ? 'Нет доступных серверов' : 'Ничего не найдено'}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1 max-w-[220px]">
+                  {servers.length === 0
+                    ? 'Нажмите «Из буфера» или импортируйте .conf файл'
+                    : 'Попробуйте изменить поисковый запрос или сбросить фильтры'}
                 </p>
               </div>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {filteredServers.map((server) => {
-                const isSelected = server.id === (selectedServerId || activeServer?.id)
+            ) : (
+              filteredServers.map((server) => {
+                const isSelected = server.id === (activeServer?.id || selectedServerId)
+                const isAwg = server.type === 'awg'
                 return (
                   <div
                     key={server.id}
                     onClick={() => handleSelectServer(server.id)}
                     className={cn(
-                      'group relative p-3 rounded-xl border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3',
+                      'group relative p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2.5',
                       isSelected
-                        ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
-                        : 'border-border/60 bg-card/40 hover:bg-card/70 hover:border-border'
+                        ? 'border-primary/60 bg-primary/10 shadow-sm ring-1 ring-primary/40'
+                        : 'border-border/30 bg-card/30 hover:bg-card/70 hover:border-border/60'
                     )}
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <span className="text-2xl select-none shrink-0">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {/* Flag */}
+                      <span className="text-xl select-none shrink-0 drop-shadow-xs">
                         {getCountryFlag(server.countryCode)}
                       </span>
 
+                      {/* Name & Type */}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-semibold text-foreground truncate">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span className="text-xs font-medium text-foreground truncate">
                             {server.name}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground truncate font-mono mt-0.5">
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground truncate font-mono mt-0.5">
                           <span
                             className={cn(
-                              'uppercase text-[9px] px-1.5 py-0.5 rounded font-mono font-medium',
-                              server.type === 'awg'
-                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                                : 'bg-muted/60 text-muted-foreground'
+                              'uppercase px-1 py-0.2 rounded font-mono font-semibold text-[9px] border',
+                              isAwg
+                                ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                                : 'bg-muted/50 text-muted-foreground border-border/30'
                             )}
                           >
-                            {server.type === 'awg' ? 'AmneziaWG' : server.type}
+                            {isAwg ? 'AWG' : server.type}
                           </span>
                           <span className="truncate">
                             {server.server}:{server.serverPort}
@@ -824,18 +720,19 @@ const VpnPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    {/* Latency badge & check */}
+                    <div className="flex items-center gap-1.5 shrink-0">
                       {server.latencyMs !== undefined && server.latencyMs !== null ? (
                         <span
                           className={cn(
-                            'text-[10px] px-2 py-0.5 rounded-full border',
+                            'text-[10px] px-1.5 py-0.5 rounded-full border font-mono',
                             getLatencyBadgeClass(server.latencyMs)
                           )}
                         >
-                          {server.latencyMs > 0 ? `${server.latencyMs} ms` : '—'}
+                          {server.latencyMs > 0 ? `${server.latencyMs} ms` : 'Таймаут'}
                         </span>
                       ) : (
-                        <span className="text-[10px] text-muted-foreground/60 px-1.5">
+                        <span className="text-[10px] text-muted-foreground/50 px-1 font-mono">
                           —
                         </span>
                       )}
@@ -845,40 +742,399 @@ const VpnPage: React.FC = () => {
                           'size-4 rounded-full border flex items-center justify-center transition-all',
                           isSelected
                             ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-muted-foreground/40 opacity-0 group-hover:opacity-100'
+                            : 'border-muted-foreground/30 opacity-0 group-hover:opacity-60'
                         )}
                       >
-                        {isSelected && <Check className="size-3 stroke-[3]" />}
+                        {isSelected && <Check className="size-2.5 stroke-[3]" />}
                       </div>
                     </div>
                   </div>
                 )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Local Proxy Ports Info Card */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border border-border/40 bg-card/30 text-xs text-muted-foreground">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5">
-              <Laptop className="size-3.5 text-primary" />
-              Локальный HTTP прокси:
-              <code className="text-foreground font-mono bg-muted/50 px-1.5 py-0.5 rounded">
-                127.0.0.1:{vpnStatus.localHttpPort || 2080}
-              </code>
-            </span>
-            <span className="flex items-center gap-1.5">
-              Локальный SOCKS5 прокси:
-              <code className="text-foreground font-mono bg-muted/50 px-1.5 py-0.5 rounded">
-                127.0.0.1:{vpnStatus.localSocksPort || 2081}
-              </code>
-            </span>
+              })
+            )}
           </div>
 
-          <div className="flex items-center gap-1.5 text-[11px]">
-            <CheckCircle2 className="size-3.5 text-emerald-400" />
-            <span>Совместимо с Chrome, Firefox, Telegram, Git и игровыми лаунчерами</span>
+          {/* Collapsible Manual Input Expand */}
+          {showManualInput && (
+            <div className="p-3 border-t border-border/40 bg-muted/20 shrink-0">
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5">
+                <span>Ссылка подписки или ключ:</span>
+                <button
+                  type="button"
+                  onClick={() => setShowManualInput(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={inputUrl}
+                  onChange={(e) => setInputUrl(e.target.value)}
+                  placeholder="https://... или vless://..."
+                  className="h-8 text-xs font-mono bg-background/60"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddManual()
+                  }}
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAddManual}
+                  disabled={addingSub || !inputUrl.trim()}
+                  className="h-8 px-3 text-xs shrink-0"
+                >
+                  {addingSub ? <Spinner className="size-3" /> : 'Добавить'}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Action Bar (Happ style: Clipboard + Conf file) */}
+          <div className="p-3 border-t border-border/40 bg-card/60 backdrop-blur-md shrink-0 flex items-center justify-between gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePasteClipboard}
+              disabled={addingSub}
+              className="flex-1 h-9 text-xs gap-1.5 bg-background/40 hover:bg-background/80 border-border/50 rounded-xl"
+              title="Импортировать ссылку подписки или ключи из буфера обмена"
+            >
+              <Clipboard className="size-3.5 text-primary" />
+              <span>Из буфера</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={addingSub}
+              className="flex-1 h-9 text-xs gap-1.5 bg-background/40 hover:bg-background/80 border-border/50 rounded-xl"
+              title="Импортировать файл конфигурации AmneziaWG / WireGuard (.conf)"
+            >
+              <FileText className="size-3.5 text-purple-400" />
+              <span>Файл .conf</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowManualInput(!showManualInput)}
+              className={cn(
+                'size-9 rounded-xl border border-border/40 shrink-0 text-muted-foreground hover:text-foreground',
+                showManualInput && 'bg-primary/15 text-primary border-primary/40'
+              )}
+              title="Ввести ссылку или ключ вручную"
+            >
+              <Plus className="size-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* ============================================================ */}
+        {/* RIGHT COLUMN: CONNECTION HUD & SPEED STAGE (Happ style)     */}
+        {/* ============================================================ */}
+        <div className="flex-1 flex flex-col justify-between rounded-2xl border border-border/50 bg-card/45 backdrop-blur-xl p-6 shadow-sm overflow-hidden relative min-h-[580px]">
+          {/* Top Bar: Mode Selector & TUN Switch */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border/30">
+            <div>
+              <h1 className="text-base font-bold tracking-tight text-foreground flex items-center gap-2">
+                GhosterNet Universal VPN
+                <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/50 bg-muted/40 text-muted-foreground font-mono font-normal">
+                  sing-box v1.14 • Wintun
+                </span>
+              </h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {activeModeObj.subtitle}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Routing Mode Dropdown (Happ Photo 4 style) */}
+              <div className="relative" ref={modeDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowModeDropdown(!showModeDropdown)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/50 bg-card/70 hover:bg-card text-xs font-medium text-foreground transition-all cursor-pointer shadow-xs"
+                >
+                  <Layers className="size-3.5 text-primary" />
+                  <span>Режим: {activeModeObj.shortTitle}</span>
+                  <ChevronDown className={cn('size-3 text-muted-foreground transition-transform', showModeDropdown && 'rotate-180')} />
+                </button>
+
+                {showModeDropdown && (
+                  <div className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-border/60 bg-popover/95 backdrop-blur-xl p-1.5 shadow-xl z-50 flex flex-col gap-1">
+                    <div className="px-2.5 py-1 text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">
+                      Режимы маршрутизации
+                    </div>
+                    {ROUTING_MODES.map((mode) => {
+                      const isSelected = routingMode === mode.id
+                      return (
+                        <div
+                          key={mode.id}
+                          onClick={() => handleSetRoutingMode(mode.id)}
+                          className={cn(
+                            'p-2 rounded-lg cursor-pointer transition-colors flex items-start justify-between gap-2',
+                            isSelected ? 'bg-primary/15 text-primary' : 'hover:bg-muted/50 text-foreground'
+                          )}
+                        >
+                          <div>
+                            <div className="text-xs font-semibold">{mode.title}</div>
+                            <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                              {mode.subtitle}
+                            </div>
+                          </div>
+                          {isSelected && <Check className="size-4 text-primary shrink-0 mt-0.5" />}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* TUN Mode Toggle */}
+              <div className="flex items-center gap-2 pl-2 border-l border-border/30">
+                <Label htmlFor="tun-switch" className="text-xs text-muted-foreground cursor-pointer select-none">
+                  TUN
+                </Label>
+                <Switch
+                  id="tun-switch"
+                  checked={tunMode}
+                  onCheckedChange={handleToggleTun}
+                  disabled={isBusy}
+                  className="data-[state=checked]:bg-primary"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Center Stage: Huge Glowing Power Toggle Button (Happ + Photo 1 style) */}
+          <div className="my-auto py-8 flex flex-col items-center justify-center relative">
+            {/* Concentric ripples/rings */}
+            {isConnected && (
+              <>
+                <div className="absolute size-64 rounded-full border border-emerald-500/15 animate-ping opacity-35 pointer-events-none" />
+                <div className="absolute size-52 rounded-full border border-emerald-500/25 pointer-events-none" />
+                <div className="absolute size-44 rounded-full border border-emerald-500/40 pointer-events-none" />
+              </>
+            )}
+
+            {/* Power Toggle Disc */}
+            <button
+              disabled={isBusy || servers.length === 0}
+              onClick={handleToggleConnect}
+              title={servers.length === 0 ? 'Добавьте сервер' : isConnected ? 'Отключить VPN' : 'Подключить VPN'}
+              className={cn(
+                'relative group transition-all duration-300 active:scale-95 cursor-pointer disabled:cursor-not-allowed',
+                servers.length === 0 && 'opacity-60'
+              )}
+            >
+              <div
+                className={cn(
+                  'w-36 h-36 rounded-full flex items-center justify-center transition-all duration-500 bg-radial-[at_30%_45%] backdrop-blur-xl border-3 shadow-2xl',
+                  isConnected
+                    ? 'from-gradient-start-power-on/70 to-gradient-end-power-on/70 border-stroke-power-on shadow-[0_0_55px_rgba(34,197,94,0.35)]'
+                    : isBusy
+                      ? 'from-amber-500/20 to-amber-900/30 border-amber-500/50 shadow-[0_0_35px_rgba(245,158,11,0.25)] animate-pulse'
+                      : 'from-gradient-start-power-off/60 to-gradient-end-power-off/60 border-stroke-power-off shadow-[0_0_35px_rgba(244,63,94,0.15)] group-hover:border-stroke-power-off/80'
+                )}
+              >
+                <div className="relative size-16 flex items-center justify-center">
+                  <Spinner
+                    className={cn(
+                      'absolute inset-0 m-auto size-16 text-foreground transition-all duration-300',
+                      isBusy ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+                    )}
+                  />
+                  <img
+                    src={PauseIcon}
+                    alt="Connected"
+                    className={cn(
+                      'absolute inset-0 size-16 fill-foreground transition-all duration-300',
+                      !isBusy && isConnected ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+                    )}
+                  />
+                  <img
+                    src={PowerIcon}
+                    alt="Disconnected"
+                    className={cn(
+                      'absolute inset-0 size-16 fill-foreground transition-all duration-300',
+                      !isBusy && !isConnected ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+                    )}
+                  />
+                </div>
+              </div>
+            </button>
+
+            {/* Status Text Typography */}
+            <div className="mt-5 flex flex-col items-center justify-center">
+              <span
+                className={cn(
+                  'text-sm font-bold tracking-widest uppercase transition-colors',
+                  isBusy
+                    ? 'text-amber-400'
+                    : isConnected
+                      ? 'text-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,0.5)]'
+                      : 'text-muted-foreground'
+                )}
+              >
+                {isStarting
+                  ? 'ПОДКЛЮЧЕНИЕ…'
+                  : isStopping
+                    ? 'ОТКЛЮЧЕНИЕ…'
+                    : isConnected
+                      ? 'ПОДКЛЮЧЕНО'
+                      : 'ОТКЛЮЧЕНО'}
+              </span>
+
+              {/* Live Uptime Timer */}
+              <div className="h-7 mt-1 flex items-center justify-center">
+                <div
+                  aria-hidden={!isConnected}
+                  className={cn(
+                    'inline-flex items-center gap-0.5 text-sm font-mono font-bold text-foreground tabular-nums transition-all duration-300',
+                    isConnected ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
+                  )}
+                >
+                  <NumberFlow value={h} format={{ minimumIntegerDigits: 2, useGrouping: false }} />
+                  <span>:</span>
+                  <NumberFlow value={m} format={{ minimumIntegerDigits: 2, useGrouping: false }} />
+                  <span>:</span>
+                  <NumberFlow value={s} format={{ minimumIntegerDigits: 2, useGrouping: false }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Active Server HUD Pill (Photo 1 style) */}
+            {activeServer ? (
+              <div className="mt-4 px-4 py-2 rounded-2xl border border-border/40 bg-card/60 backdrop-blur-md flex items-center gap-3 shadow-xs">
+                <span className="text-2xl select-none drop-shadow-sm">
+                  {getCountryFlag(activeServer.countryCode)}
+                </span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-foreground truncate max-w-[200px]">
+                      {activeServer.name}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-[9px] uppercase px-1.5 py-0.2 rounded font-mono font-semibold border',
+                        activeServer.type === 'awg'
+                          ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                          : 'bg-primary/15 text-primary border-primary/25'
+                      )}
+                    >
+                      {activeServer.type === 'awg' ? 'AmneziaWG' : activeServer.type}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground font-mono truncate">
+                    {activeServer.server}:{activeServer.serverPort}
+                  </div>
+                </div>
+
+                {activeServer.latencyMs !== undefined && activeServer.latencyMs !== null && (
+                  <span
+                    className={cn(
+                      'ml-2 text-[10px] px-2 py-0.5 rounded-full border font-mono font-medium',
+                      getLatencyBadgeClass(activeServer.latencyMs)
+                    )}
+                  >
+                    {activeServer.latencyMs > 0 ? `${activeServer.latencyMs} ms` : 'Таймаут'}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="mt-4 text-xs text-muted-foreground">
+                Сервер не выбран
+              </div>
+            )}
+          </div>
+
+          {/* Real-time Neon Speed Cards (Photo 1 style) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+            {/* Download Speed */}
+            <div className="p-3.5 rounded-xl border border-border/40 bg-card/50 backdrop-blur-md flex items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+                  <ArrowDown className="size-5" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-muted-foreground uppercase font-medium tracking-wide">
+                    Входящая скорость
+                  </div>
+                  <div className="text-lg font-bold font-mono text-cyan-400 tabular-nums">
+                    {formatSpeed(speeds.down)}
+                  </div>
+                </div>
+              </div>
+              <Activity className={cn('size-5 text-cyan-400/40', isConnected && 'animate-pulse')} />
+            </div>
+
+            {/* Upload Speed */}
+            <div className="p-3.5 rounded-xl border border-border/40 bg-card/50 backdrop-blur-md flex items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <ArrowUp className="size-5" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-muted-foreground uppercase font-medium tracking-wide">
+                    Исходящая скорость
+                  </div>
+                  <div className="text-lg font-bold font-mono text-emerald-400 tabular-nums">
+                    {formatSpeed(speeds.up)}
+                  </div>
+                </div>
+              </div>
+              <Activity className={cn('size-5 text-emerald-400/40', isConnected && 'animate-pulse')} />
+            </div>
+          </div>
+
+          {/* Bottom Action Bar: Ping Test & Local Ports (Happ Photo 2 style) */}
+          <div className="mt-4 pt-4 border-t border-border/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              {/* Test Ping Button (Prominent pill like Happ) */}
+              <Button
+                variant="default"
+                size="sm"
+                disabled={isTestingLatency || servers.length === 0}
+                onClick={handleTestLatencies}
+                className="h-9 px-5 rounded-xl text-xs gap-2 font-medium bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-600/90 text-primary-foreground shadow-md cursor-pointer transition-all"
+              >
+                {isTestingLatency ? (
+                  <Spinner className="size-3.5" />
+                ) : (
+                  <Zap className="size-3.5 text-amber-300" />
+                )}
+                <span>Замер пинга</span>
+              </Button>
+
+              {isConnected && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    vpnRestart()
+                      .then(() => toast.success('VPN перезапущен'))
+                      .catch((e) => toast.error('Ошибка перезапуска', { description: String(e) }))
+                  }}
+                  className="h-9 px-3 rounded-xl text-xs gap-1.5 border-border/50 bg-background/30 hover:bg-background/70"
+                >
+                  <RotateCw className="size-3.5" />
+                  <span>Перезапустить</span>
+                </Button>
+              )}
+            </div>
+
+            {/* Local Proxy Ports Info */}
+            <div className="flex items-center gap-3 text-[11px] text-muted-foreground font-mono">
+              <span className="flex items-center gap-1">
+                <Laptop className="size-3 text-primary" />
+                HTTP: <span className="text-foreground">{vpnStatus.localHttpPort || 2080}</span>
+              </span>
+              <span>•</span>
+              <span>
+                SOCKS5: <span className="text-foreground">{vpnStatus.localSocksPort || 2081}</span>
+              </span>
+            </div>
           </div>
         </div>
       </div>

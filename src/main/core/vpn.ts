@@ -289,12 +289,12 @@ export async function startVpn(): Promise<void> {
     child.on('exit', (code, signal) => {
       child = null
       if (stopRequested) {
-        setStatus({ state: 'stopped', pid: undefined })
+        setStatus({ state: 'stopped', pid: undefined, startedAt: undefined })
         log('info', 'VPN остановлен')
       } else {
         const msg = `VPN отключен (код: ${code ?? 'none'}, сигнал: ${signal ?? 'none'})`
         log('warn', msg)
-        setStatus({ state: 'stopped', pid: undefined, lastError: msg })
+        setStatus({ state: 'stopped', pid: undefined, startedAt: undefined, lastError: msg })
       }
     })
 
@@ -335,7 +335,7 @@ export async function stopVpn(): Promise<void> {
   await killStaleSingBox()
 
   child = null
-  setStatus({ state: 'stopped', pid: undefined })
+  setStatus({ state: 'stopped', pid: undefined, startedAt: undefined })
 
   const cfg = await getAppConfig()
   if (cfg.vpn) {
