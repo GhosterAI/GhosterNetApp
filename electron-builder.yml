@@ -8,6 +8,7 @@ directories:
 files:
   - '!**/.vscode/*'
   - '!src/*'
+  - '!ph/*'
   - '!aur/*'
   - '!images/*'
   - '!scripts/*'
