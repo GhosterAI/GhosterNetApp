@@ -267,8 +267,20 @@ async function startTgwsImpl(): Promise<void> {
     log('info', `spawning: ${bin} ${args.join(' ')}`)
     child = spawn(bin, args, { windowsHide: true })
 
-    child.stdout?.on('data', (buf) => log('info', buf.toString().trimEnd()))
-    child.stderr?.on('data', (buf) => log('warn', buf.toString().trimEnd()))
+    const handleTgwsOutput = (buf: Buffer): void => {
+      const text = buf.toString().trimEnd()
+      for (const line of text.split(/\r?\n/)) {
+        const trimmed = line.trim()
+        if (!trimmed) continue
+        let level: ControllerLog['type'] = 'info'
+        if (/\b(?:ERROR|FATAL)\b/i.test(trimmed)) level = 'error'
+        else if (/\b(?:WARNING|WARN)\b/i.test(trimmed)) level = 'warn'
+        else if (/\b(?:DEBUG)\b/i.test(trimmed)) level = 'debug'
+        log(level, trimmed)
+      }
+    }
+    child.stdout?.on('data', handleTgwsOutput)
+    child.stderr?.on('data', handleTgwsOutput)
     child.on('error', (err) => {
       log('error', `child error: ${err.message}`)
       setStatus({ state: 'error', lastError: err.message, pid: undefined })

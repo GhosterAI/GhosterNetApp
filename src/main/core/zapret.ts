@@ -500,10 +500,8 @@ export async function buildRuntimeStrategyBatch(
 
   let content = readFileSync(srcBat, 'utf8')
   content = content.replace(/start\s+"[^"]*"\s+\/min\s+/gi, '')
-  content = content
-    .replace(/^\s*call\s+service\.bat\s+status_zapret\s*$/gim, 'rem status_zapret skipped')
-    .replace(/^\s*call\s+service\.bat\s+check_updates\s*$/gim, 'rem check_updates skipped')
-    .replace(/^\s*call\s+service\.bat\s+load_game_filter\s*$/gim, 'rem load_game_filter handled inline')
+  content = content.replace(/cd\s+\/d\s+%BIN%/gi, 'cd /d "%BIN%"')
+  content = content.replace(/^\s*call\s+service\.bat\s+.*$/gim, (m) => `rem ${m.trim()} handled by GhosterNet`)
 
   // Resolve %GameFilterTCP%, %GameFilterUDP%, and %GameFilter% directly before UDP port exclusion
   const gameMode = z.gameFilterMode ?? (z.gameFilter ? 'tcpudp' : 'disabled')

@@ -218,6 +218,32 @@ export interface BuildSingBoxConfigOptions {
   localSocksPort: number
 }
 
+const RU_DOMAIN_SUFFIXES = [
+  '.ru',
+  '.su',
+  '.xn--p1ai',
+  'yandex.ru',
+  'ya.ru',
+  'vk.com',
+  'vkvideo.ru',
+  'ok.ru',
+  'mail.ru',
+  'gosuslugi.ru',
+  'rambler.ru',
+  'avito.ru',
+  'ozon.ru',
+  'wildberries.ru',
+  'sberbank.ru',
+  'tbank.ru',
+  'tinkoff.ru',
+  'kinopoisk.ru',
+  'rutube.ru',
+  'dzen.ru',
+  'kion.ru',
+  'ivi.ru',
+  '2gis.ru'
+]
+
 export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<string, unknown> {
   const { server, tunMode, routingMode, localHttpPort, localSocksPort } = opts
   const inbounds: Array<Record<string, unknown>> = []
@@ -227,8 +253,7 @@ export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<stri
     type: 'mixed',
     tag: 'mixed-in',
     listen: '127.0.0.1',
-    listen_port: localHttpPort,
-    sniff: true
+    listen_port: localHttpPort
   })
 
   // SOCKS5 inbound if separate port configured
@@ -237,8 +262,7 @@ export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<stri
       type: 'socks',
       tag: 'socks-in',
       listen: '127.0.0.1',
-      listen_port: localSocksPort,
-      sniff: true
+      listen_port: localSocksPort
     })
   }
 
@@ -251,8 +275,7 @@ export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<stri
       address: ['172.19.0.1/30'],
       auto_route: true,
       strict_route: true,
-      stack: 'system',
-      sniff: true
+      stack: 'system'
     })
   }
 
@@ -267,17 +290,16 @@ export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<stri
     {
       type: 'block',
       tag: 'block'
-    },
-    {
-      type: 'dns',
-      tag: 'dns-out'
     }
   ]
 
   const rules: Array<Record<string, unknown>> = [
     {
-      outbound: 'dns-out',
-      protocol: 'dns'
+      action: 'sniff'
+    },
+    {
+      protocol: 'dns',
+      action: 'hijack-dns'
     },
     {
       outbound: 'direct',
@@ -288,41 +310,66 @@ export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<stri
   if (routingMode === 'bypass-ru') {
     rules.push({
       outbound: 'direct',
-      geoip: ['ru']
+      domain_suffix: RU_DOMAIN_SUFFIXES
     })
     rules.push({
       outbound: 'direct',
-      geosite: ['ru', 'category-ru']
+      rule_set: ['geosite-ru', 'geoip-ru']
     })
   }
 
   const dnsServers: Array<Record<string, unknown>> = [
     {
       tag: 'remote-dns',
-      address: 'https://1.1.1.1/dns-query',
-      address_resolver: 'direct-dns',
-      strategy: 'prefer_ipv4'
+      type: 'https',
+      server: '1.1.1.1',
+      domain_resolver: 'direct-dns'
     },
     {
       tag: 'direct-dns',
-      address: '77.88.8.8',
-      detour: 'direct',
-      strategy: 'prefer_ipv4'
+      type: 'udp',
+      server: '77.88.8.8',
+      detour: 'direct'
     }
   ]
 
-  const dnsRules: Array<Record<string, unknown>> = [
-    {
-      outbound: 'direct',
-      server: 'direct-dns'
-    }
-  ]
+  const dnsRules: Array<Record<string, unknown>> = []
 
   if (routingMode === 'bypass-ru') {
     dnsRules.push({
-      geosite: ['ru', 'category-ru'],
+      domain_suffix: RU_DOMAIN_SUFFIXES,
       server: 'direct-dns'
     })
+    dnsRules.push({
+      rule_set: ['geosite-ru'],
+      server: 'direct-dns'
+    })
+  }
+
+  const routeObj: Record<string, unknown> = {
+    rules,
+    auto_detect_interface: true,
+    default_domain_resolver: 'direct-dns',
+    final: 'proxy'
+  }
+
+  if (routingMode === 'bypass-ru') {
+    routeObj.rule_set = [
+      {
+        tag: 'geosite-ru',
+        type: 'remote',
+        format: 'binary',
+        url: 'https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-ru.srs',
+        download_detour: 'direct'
+      },
+      {
+        tag: 'geoip-ru',
+        type: 'remote',
+        format: 'binary',
+        url: 'https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-ru.srs',
+        download_detour: 'direct'
+      }
+    ]
   }
 
   return {
@@ -338,10 +385,6 @@ export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<stri
     },
     inbounds,
     outbounds,
-    route: {
-      rules,
-      auto_detect_interface: true,
-      final: 'proxy'
-    }
+    route: routeObj
   }
 }
