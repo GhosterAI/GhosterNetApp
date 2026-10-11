@@ -131,6 +131,14 @@ import {
   removeAgManualPath,
   getAgLogs
 } from '../core/ag-unlocker'
+import {
+  getPsiphonStatus,
+  startPsiphon,
+  stopPsiphon,
+  restartPsiphon,
+  togglePsiphonSystemProxy,
+  setPsiphonRegion
+} from '../core/psiphon'
 import { execFile } from 'node:child_process'
 import { writeFileSync, unlinkSync } from 'node:fs'
 import path from 'node:path'
@@ -561,6 +569,14 @@ export function registerIpcMainHandlers(): void {
       return { ok: false, message: err instanceof Error ? err.message : String(err) }
     }
   })
+
+  // ---- Psiphon VPN & Proxy ------------------------------------------------
+  ipcMain.handle('psiphon:status', h(() => getPsiphonStatus()))
+  ipcMain.handle('psiphon:start', h(() => startPsiphon()))
+  ipcMain.handle('psiphon:stop', h(() => stopPsiphon()))
+  ipcMain.handle('psiphon:restart', h(() => restartPsiphon()))
+  ipcMain.handle('psiphon:setSystemProxy', h((enable) => togglePsiphonSystemProxy(Boolean(enable))))
+  ipcMain.handle('psiphon:setRegion', h((region) => setPsiphonRegion(String(region || ''))))
 
   // ---- Quit / restart -----------------------------------------------------
   ipcMain.handle('app:quit', h(() => app.quit()))

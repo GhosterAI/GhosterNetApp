@@ -9,10 +9,13 @@ import { CharacterMorph } from '@renderer/components/ui/character-morph'
 import { useTgwsStore } from '@renderer/store/tgws-store'
 import { useZapretStore } from '@renderer/store/zapret-store'
 import { useZapretTestStore } from '@renderer/store/zapret-test-store'
+import { usePsiphonStore } from '@renderer/store/psiphon-store'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import {
   tgwsStart, tgwsStop, tgwsRestart,
   zapretStart, zapretStop, zapretRestart,
+  psiphonStart, psiphonStop, psiphonRestart,
+  psiphonSetSystemProxy,
   zapretCheckUpdate, tgwsCheckUpdate,
   dnsAiCheckUpdate, agCheckUpdate,
   profilesSwitch,
@@ -22,7 +25,7 @@ import {
 } from '@renderer/utils/ipc'
 import { Button } from '@renderer/components/ui/button'
 import { POWER_ON_BANNER_STYLE, BUNDLED_TGWS_VERSION, BUNDLED_ZAPRET_VERSION } from '@renderer/lib/utils'
-import { RotateCw, Sparkles, X, Layers } from 'lucide-react'
+import { RotateCw, Sparkles, X, Layers, Globe } from 'lucide-react'
 import Power from '@renderer/assets/on_icon.svg'
 import Pause from '@renderer/assets/pause_icon.svg'
 
@@ -187,6 +190,7 @@ const Home: React.FC = () => {
   const navigate = useNavigate()
   const tgws = useTgwsStore((s) => s.status)
   const zapret = useZapretStore((s) => s.status)
+  const psiphon = usePsiphonStore((s) => s.status)
   // Block the Zapret toggle while the strategy tester is iterating —
   // a click here would race the lock held by zapret-tester.ts in main
   // and queue silently behind the test, which feels like a stuck button.
@@ -280,6 +284,31 @@ const Home: React.FC = () => {
     }
   }
 
+  const togglePsiphon = async (next: boolean): Promise<void> => {
+    try {
+      if (next) await psiphonStart()
+      else await psiphonStop()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      toast.error(next ? 'Не удалось запустить Psiphon' : 'Не удалось остановить Psiphon', {
+        description: msg
+      })
+    }
+  }
+
+  const handleTogglePsiphonSystemProxy = async (enable: boolean): Promise<void> => {
+    try {
+      await psiphonSetSystemProxy(enable)
+      toast.success(
+        enable
+          ? 'Системный прокси Windows активирован'
+          : 'Системный прокси отключен (только локальные порты)'
+      )
+    } catch (e) {
+      toast.error('Не удалось изменить режим системного прокси')
+    }
+  }
+
   // App version pulled from main via IPC (electron's app.getVersion()
   const [appVersion, setAppVersion] = useState<string | null>(null)
   useEffect(() => {
@@ -294,6 +323,7 @@ const Home: React.FC = () => {
       const tasks: Promise<unknown>[] = []
       if (tgws.state === 'running' || tgws.state === 'error') tasks.push(tgwsRestart())
       if (zapret.state === 'running' || zapret.state === 'error') tasks.push(zapretRestart())
+      if (psiphon.state === 'running' || psiphon.state === 'error') tasks.push(psiphonRestart())
       if (tasks.length === 0) {
         toast.info('Нет запущенных процессов для перезагрузки', {
           style: {
@@ -336,7 +366,9 @@ const Home: React.FC = () => {
     tgws.state === 'running' ||
     tgws.state === 'error' ||
     zapret.state === 'running' ||
-    zapret.state === 'error'
+    zapret.state === 'error' ||
+    psiphon.state === 'running' ||
+    psiphon.state === 'error'
 
   return (
     <BasePage>
@@ -389,13 +421,7 @@ const Home: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4 flex-1 items-center">
-          <PowerToggle
-            label="Telegram"
-            status={tgws}
-            onToggle={toggleTgws}
-            version={appConfig?.tgws?.installedVersion ?? tgwsUpdate?.installed ?? BUNDLED_TGWS_VERSION}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 flex-1 items-center max-w-5xl mx-auto w-full">
           <PowerToggle
             label="Zapret"
             status={zapret}
@@ -408,7 +434,47 @@ const Home: React.FC = () => {
                 : undefined
             }
           />
+          <PowerToggle
+            label="Telegram"
+            status={tgws}
+            onToggle={toggleTgws}
+            version={appConfig?.tgws?.installedVersion ?? tgwsUpdate?.installed ?? BUNDLED_TGWS_VERSION}
+          />
+          <PowerToggle
+            label="Psiphon VPN"
+            status={psiphon}
+            onToggle={togglePsiphon}
+            version={appConfig?.psiphon?.installedVersion ?? '1.0'}
+          />
         </div>
+
+        {/* Psiphon Quick Controls Pill */}
+        {psiphon.state === 'running' && (
+          <div className="flex justify-center pb-2 px-4">
+            <div className="inline-flex flex-wrap items-center justify-center gap-2.5 rounded-full border border-border/40 bg-card/65 backdrop-blur-xl px-4 py-1.5 text-xs shadow-sm">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <Globe className="size-3.5 text-primary" />
+                <span>
+                  {psiphon.connectedRegion ? `Регион: ${psiphon.connectedRegion}` : 'Подключено к Psiphon'}
+                </span>
+              </span>
+              <span className="h-3 w-px bg-border/40" />
+              <button
+                type="button"
+                onClick={() => void handleTogglePsiphonSystemProxy(!psiphon.systemProxy)}
+                className={`font-medium cursor-pointer transition-colors ${
+                  psiphon.systemProxy ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {psiphon.systemProxy ? '✓ Системный прокси (Вся система)' : 'Только локальный прокси'}
+              </button>
+              <span className="h-3 w-px bg-border/40" />
+              <span className="font-mono text-[11px] text-muted-foreground">
+                HTTP: {psiphon.httpPort || 20807} | SOCKS5: {psiphon.socksPort || 20808}
+              </span>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-center h-12 pb-6">
           {anyProcessActive && (
             <Button

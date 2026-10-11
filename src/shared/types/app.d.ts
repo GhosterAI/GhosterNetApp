@@ -132,6 +132,25 @@ interface AppConfig {
   dns?: DnsConfig
   dnsAi?: DnsAiConfig
   agUnlocker?: AgUnlockerConfig
+  psiphon?: PsiphonConfig
+}
+
+interface PsiphonConfig {
+  enabled: boolean
+  autoStart?: boolean
+  httpPort: number
+  socksPort: number
+  egressRegion?: string
+  systemProxy: boolean
+  installedVersion?: string
+}
+
+interface PsiphonStatus extends CoreStatus {
+  httpPort?: number
+  socksPort?: number
+  connectedRegion?: string
+  systemProxy?: boolean
+  availableRegions?: string[]
 }
 
 interface DnsAiConfig {

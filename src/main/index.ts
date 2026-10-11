@@ -11,6 +11,7 @@ import { createApplicationMenu } from './resolve/menu'
 import { initShortcut } from './resolve/shortcut'
 import { getTgwsStatus, restartTgws, startTgws, stopTgws } from './core/tgws'
 import { getZapretStatus, restartZapret, startZapret, stopZapret } from './core/zapret'
+import { stopPsiphon } from './core/psiphon'
 import { appLog } from './utils/app-logger'
 import { enableAutoRun, disableAutoRun } from './sys/autoRun'
 import { isRunningAsAdmin } from './utils/elevation'
@@ -155,6 +156,7 @@ function syncKillChildren(): void {
 
     spawnSync('taskkill.exe', ['/F', '/IM', 'TgWsProxy_windows.exe', '/T'], opts)
     spawnSync('taskkill.exe', ['/F', '/IM', 'winws.exe', '/T'], opts)
+    spawnSync('taskkill.exe', ['/F', '/IM', 'psiphon-tunnel-core.exe', '/T'], opts)
 
     for (const svc of ['WinDivert', 'windivert', 'WinDivert64', 'windivert64']) {
       spawnSync('sc.exe', ['stop', svc], opts)
@@ -166,7 +168,7 @@ async function cleanupServices(): Promise<void> {
   if (cleanupRan) return
   cleanupRan = true
   await Promise.race([
-    Promise.all([stopTgws(), stopZapret()]).catch(() => void 0),
+    Promise.all([stopTgws(), stopZapret(), stopPsiphon()]).catch(() => void 0),
     new Promise<void>((r) => setTimeout(r, 3000))
   ])
   syncKillChildren()

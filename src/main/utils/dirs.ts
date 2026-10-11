@@ -154,3 +154,13 @@ export function agUnlockerBinaryPath(): string {
   }
   return path.join(resourcesDir(), 'ag-unlocker', 'AG_2.21.1.exe')
 }
+
+export function psiphonRuntimeDir(): string {
+  return path.join(runtimeDir(), 'psiphon')
+}
+
+export function psiphonBinaryPath(): string {
+  const rt = path.join(psiphonRuntimeDir(), 'psiphon-tunnel-core.exe')
+  if (existsSync(rt)) return rt
+  return path.join(resourcesDir(), 'psiphon', 'psiphon-tunnel-core.exe')
+}
