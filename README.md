@@ -19,7 +19,7 @@
   <p align="center">
     <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest/download/GhosterNet_x64.exe"><strong>Скачать установщик (.exe)</strong></a> •
     <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest/download/GhosterNet_x64-portable.7z"><strong>Скачать Portable (.7z)</strong></a> •
-    <a href="https://github.com/GhosterAI/GhosterNet"><strong>Официальный сайт</strong></a> •
+    <a href="https://ghosternet.vercel.app/"><strong>Официальный сайт</strong></a> •
     <a href="#быстрый-старт"><strong>Быстрый старт</strong></a> •
     <a href="#архитектура-и-модули"><strong>Архитектура</strong></a> •
     <a href="#часто-задаваемые-вопросы-faq"><strong>FAQ</strong></a>
