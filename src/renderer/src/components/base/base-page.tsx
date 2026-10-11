@@ -5,7 +5,7 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 
-const sidebarPaths = new Set(['/home', '/telegram', '/zapret', '/services', '/network', '/logs', '/settings', '/about'])
+const sidebarPaths = new Set(['/home', '/telegram', '/zapret', '/antigravity', '/network', '/settings'])
 const isMac = platform === 'darwin'
 
 interface Props {
@@ -19,7 +19,8 @@ interface Props {
 const BasePage = forwardRef<HTMLDivElement, Props>((props, ref) => {
   const location = useLocation()
   const navigate = useNavigate()
-  const isSubPage = !sidebarPaths.has(location.pathname)
+  const isHome = location.pathname === '/' || location.pathname.startsWith('/home')
+  const isSubPage = !isHome && !sidebarPaths.has(location.pathname)
 
   const contentRef = useRef<HTMLDivElement>(null)
   useImperativeHandle(ref, () => {
@@ -28,9 +29,15 @@ const BasePage = forwardRef<HTMLDivElement, Props>((props, ref) => {
 
   return (
     <div ref={contentRef} className="w-full h-full flex flex-col">
-      <div className="sticky top-0 z-40 w-full shrink-0 bg-background/80 backdrop-blur-md border-b border-border/30">
-        <div className="app-drag px-2 pt-2.5 pb-2 flex justify-between h-13.5">
-          <div className="title h-full text-lg leading-8 flex items-center gap-1">
+      <div
+        className={`sticky top-0 z-40 w-full shrink-0 transition-colors ${
+          isHome
+            ? 'bg-transparent border-b border-transparent'
+            : 'bg-background/55 backdrop-blur-xl border-b border-border/20'
+        }`}
+      >
+        <div className="app-drag px-3 pt-2.5 pb-2 flex justify-between h-13.5">
+          <div className="title h-full text-base font-medium leading-8 flex items-center gap-1.5">
             {(isSubPage || props.showBackButton) && (
               <Button
                 size="icon-sm"

@@ -20,7 +20,10 @@ import {
   ArrowUpCircle,
   X,
   Activity,
-  Check
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Sliders
 } from 'lucide-react'
 import BasePage from '@renderer/components/base/base-page'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
@@ -98,6 +101,7 @@ const NetworkPage: React.FC = () => {
   const [autoFixReport, setAutoFixReport] = useState<AutoFixReport | null>(null)
   const [liveServices, setLiveServices] = useState<LiveServiceStatus[] | null>(null)
   const [liveChecking, setLiveChecking] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const refreshDnsAi = async (): Promise<void> => {
     try {
@@ -504,7 +508,25 @@ const NetworkPage: React.FC = () => {
   const adapters = dnsStatus?.adapters ?? []
 
   return (
-    <BasePage title="Моды, DNS и Диагностика">
+    <BasePage
+      title="Сеть и DNS"
+      header={
+        <Button
+          size="sm"
+          variant="default"
+          onClick={() => void handleAutoFix()}
+          disabled={autoFixing}
+          className="h-8 text-xs gap-1.5"
+        >
+          {autoFixing ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="size-3.5" />
+          )}
+          Починить сеть в 1 клик
+        </Button>
+      }
+    >
       <div className="px-4 pb-6 space-y-4">
         {dnsAiUpdate?.hasUpdate && !dnsAiUpdate.dismissed && !dnsAiUpdateDismissed && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 text-foreground shadow-sm">
@@ -822,8 +844,36 @@ const NetworkPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* DNS Manager Card */}
-        <Card>
+        {autoFixReport && (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-1.5 text-xs">
+            <div className="font-semibold text-emerald-400 flex items-center gap-1.5">
+              <Check className="size-4" />
+              Отчёт «Доктора сети»: восстановление успешно завершено
+            </div>
+            <ul className="list-disc list-inside space-y-0.5 text-foreground/90 pl-1">
+              {autoFixReport.actions.map((act, i) => (
+                <li key={i}>{act}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="w-full flex items-center justify-between rounded-2xl border border-border/35 bg-card/55 backdrop-blur-xl px-4 py-3 text-left text-xs text-muted-foreground hover:text-foreground transition cursor-pointer"
+        >
+          <span className="inline-flex items-center gap-2 font-medium text-foreground/90">
+            <Sliders className="size-3.5 text-primary" />
+            Дополнительные инструменты (Системный DNS, Моды, Диагностика и Пинг сервисов)
+          </span>
+          {showAdvanced ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+        </button>
+
+        {showAdvanced && (
+          <div className="space-y-4">
+            {/* DNS Manager Card */}
+            <Card>
           <CardHeader className="space-y-1">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle className="flex items-center gap-2">
@@ -1306,6 +1356,8 @@ const NetworkPage: React.FC = () => {
             })}
           </CardContent>
         </Card>
+          </div>
+        )}
       </div>
     </BasePage>
   )

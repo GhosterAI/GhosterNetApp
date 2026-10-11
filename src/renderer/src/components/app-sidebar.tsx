@@ -2,7 +2,7 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from 'next-themes'
-import { Home as HomeIcon, ScrollText, Settings as SettingsIcon, Info as InfoIcon, PanelLeftClose, PanelLeft, LayoutGrid, Blocks, Rocket } from 'lucide-react'
+import { Home as HomeIcon, ScrollText, Settings as SettingsIcon, Info as InfoIcon, Blocks, Rocket } from 'lucide-react'
 import ZapretIcon from '@renderer/components/zapret-icon'
 import TelegramIcon from '@renderer/components/telegram-icon'
 import logoDark from '@renderer/assets/logo.png'
@@ -16,8 +16,7 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar
+  SidebarMenuItem
 } from '@renderer/components/ui/sidebar'
 
 const nav = [
@@ -25,23 +24,15 @@ const nav = [
   { key: 'telegram',    path: '/telegram',    icon: TelegramIcon, label: 'Telegram' },
   { key: 'zapret',      path: '/zapret',      icon: ZapretIcon,   label: 'Zapret' },
   { key: 'antigravity', path: '/antigravity', icon: Rocket,       label: 'Antigravity' },
-  { key: 'services',    path: '/services',    icon: LayoutGrid,   label: 'Сервисы' },
-  { key: 'network',     path: '/network',     icon: Blocks,       label: 'Моды и DNS' },
-  { key: 'logs',        path: '/logs',        icon: ScrollText,   label: 'Логи' },
-  { key: 'settings',    path: '/settings',    icon: SettingsIcon, label: 'Настройки' },
-  { key: 'about',       path: '/about',       icon: InfoIcon,     label: 'Информация' }
+  { key: 'network',     path: '/network',     icon: Blocks,       label: 'Сеть и DNS' },
+  { key: 'settings',    path: '/settings',    icon: SettingsIcon, label: 'Настройки' }
 ]
 
 const AppSidebar: React.FC = () => {
   const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
-  const { toggleSidebar, state } = useSidebar()
-  // `useTheme` from next-themes is reactive: when the user flips light/dark
-  // in Settings the hook re-renders this component immediately, swapping
-  // the <img src=...> live without an app restart.
   const { resolvedTheme } = useTheme()
-  const collapsed = state === 'collapsed'
   const logoSrc = resolvedTheme === 'light' ? logoLight : logoDark
 
   return (
@@ -60,7 +51,9 @@ const AppSidebar: React.FC = () => {
             <SidebarMenu>
               {nav.map((item) => {
                 const Icon = item.icon
-                const isActive = location.pathname.startsWith(item.path)
+                const isActive =
+                  location.pathname.startsWith(item.path) ||
+                  (item.key === 'zapret' && location.pathname.startsWith('/services'))
                 return (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton
@@ -83,12 +76,24 @@ const AppSidebar: React.FC = () => {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              tooltip={collapsed ? 'Развернуть' : 'Свернуть'}
-              onClick={toggleSidebar}
-              className="cursor-pointer"
+              tooltip="Логи"
+              isActive={location.pathname.startsWith('/logs')}
+              onClick={() => navigate('/logs')}
+              className="cursor-pointer text-muted-foreground hover:text-foreground"
             >
-              {collapsed ? <PanelLeft className="size-4" /> : <PanelLeftClose className="size-4" />}
-              <span>{collapsed ? 'Развернуть' : 'Свернуть'}</span>
+              <ScrollText className="size-4" />
+              <span>Логи</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="О программе"
+              isActive={location.pathname.startsWith('/about')}
+              onClick={() => navigate('/about')}
+              className="cursor-pointer text-muted-foreground hover:text-foreground"
+            >
+              <InfoIcon className="size-4" />
+              <span>О программе</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

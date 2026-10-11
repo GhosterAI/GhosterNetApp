@@ -4,7 +4,7 @@
 
   <img src="https://raw.githubusercontent.com/GhosterAI/GhosterNet/main/assets/ghost-sculpture.svg" width="160" height="160" alt="GhosterNet Logo" />
 
-  # GhosterNet v2.2.0
+  # GhosterNet v2.4.0
   
   **Единый швейцарский нож сетевой свободы для Windows 10 & 11 (x64)**  
   *Обход DPI, ускорение Telegram MTProto, зашифрованный DNS-AI, разблокировка Google Antigravity IDE и «Доктор сети» в один клик.*

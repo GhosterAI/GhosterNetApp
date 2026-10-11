@@ -26,7 +26,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/u
 import {
   Copy,
   ExternalLink,
-  MoreVertical,
   Download,
   Loader2,
   Sparkles,
@@ -34,7 +33,10 @@ import {
   Gauge,
   CheckCircle2,
   Globe,
-  RefreshCw
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  Sliders
 } from 'lucide-react'
 import TelegramIcon from '@renderer/components/telegram-icon'
 import ReloadTgwsIcon from '@renderer/components/reload-tgws-icon'
@@ -74,6 +76,7 @@ const TelegramPage: React.FC = () => {
   const [link, setLink] = useState('')
   const [tuningMode, setTuningMode] = useState<'fast' | 'full' | null>(null)
   const [tuneResult, setTuneResult] = useState<TgwsTuneReport | null>(null)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const tgws = appConfig?.tgws
 
@@ -290,8 +293,21 @@ const TelegramPage: React.FC = () => {
         />
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
             <CardTitle>Подключение в Telegram</CardTitle>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void handleRunTune('fast')}
+              disabled={tuningMode !== null}
+            >
+              {tuningMode === 'fast' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Wand2 className="h-3.5 w-3.5" />
+              )}
+              Автоподбор моста
+            </Button>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">
@@ -330,35 +346,43 @@ const TelegramPage: React.FC = () => {
                 )}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground inline-flex flex-wrap items-center gap-x-1 gap-y-0.5">
-              Вставьте ссылку в Telegram
-              <span className="opacity-70">&rarr;</span>
-              Настройки
-              <span className="opacity-70">&rarr;</span>
-              Продвинутые настройки
-              <span className="opacity-70">&rarr;</span>
-              Тип соединения
-              <span className="opacity-70">&rarr;</span>
-              <MoreVertical className="size-3.5 translate-y-px -mx-1.5" />
-              <span>или нажмите на</span>
-              <ExternalLink className="size-3.5 translate-y-px" />
-              <span>для автоматического подключения.</span>
-            </p>
+            {tuneResult && (
+              <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-2.5 text-xs flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 font-medium text-emerald-400">
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                  {tuneResult.summary}
+                </span>
+                <span className="font-mono text-foreground/80">
+                  {tuneResult.bestBridgeDomain ?? '—'} ({tuneResult.bestBridgeLatencyMs ?? '—'} мс)
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Telegram DC Ping Benchmark Card */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-sky-400" />
-                Спидтест датацентров Telegram (DC Ping & Benchmark)
-              </CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
-                Измерение задержки ко всем 5 ключевым датацентрам Telegram (DC1–DC5) и авто-рекомендация наилучшего DC для медиа.
-              </p>
-            </div>
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="w-full flex items-center justify-between rounded-2xl border border-border/35 bg-card/55 backdrop-blur-xl px-4 py-3 text-left text-xs text-muted-foreground hover:text-foreground transition cursor-pointer"
+        >
+          <span className="inline-flex items-center gap-2 font-medium text-foreground/90">
+            <Sliders className="size-3.5 text-primary" />
+            Тонкая настройка и спидтест датацентров (DC1–DC5)
+          </span>
+          {showAdvanced ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+        </button>
+
+        {showAdvanced && (
+          <div className="space-y-4">
+            {/* Telegram DC Ping Benchmark Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-sky-400" />
+                    Спидтест датацентров Telegram (DC1–DC5)
+                  </CardTitle>
+                </div>
             <Button
               size="sm"
               variant="outline"
@@ -628,6 +652,8 @@ const TelegramPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+          </div>
+        )}
 
         {status.lastError && (
           <Card className="border-red-500/50">

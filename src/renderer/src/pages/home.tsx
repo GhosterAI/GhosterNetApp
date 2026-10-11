@@ -183,38 +183,6 @@ const PowerToggle: React.FC<PowerToggleProps> = ({
   )
 }
 
-interface UpdateNoticeProps {
-  title: string
-  subtitle: string
-  onDetails: () => void
-  onDismiss: () => void
-}
-const UpdateNotice: React.FC<UpdateNoticeProps> = ({ title, subtitle, onDetails, onDismiss }) => (
-  <div className="relative flex items-center gap-3 rounded-lg border border-stroke bg-card/70 backdrop-blur-xl px-4 py-2.5">
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
-      <Sparkles className="h-4 w-4" />
-    </div>
-    <div className="min-w-0 flex-1">
-      <div className="text-sm font-medium truncate text-foreground">{title}</div>
-      <div className="text-xs text-muted-foreground truncate">{subtitle}</div>
-    </div>
-    <div className="flex shrink-0 items-center gap-1">
-      <Button size="sm" onClick={onDetails}>
-        Подробнее
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        onClick={onDismiss}
-        title="Скрыть"
-      >
-        <X className="h-3.5 w-3.5" />
-      </Button>
-    </div>
-  </div>
-)
-
 const Home: React.FC = () => {
   const navigate = useNavigate()
   const tgws = useTgwsStore((s) => s.status)
@@ -350,48 +318,58 @@ const Home: React.FC = () => {
     }
   }
 
+  const pendingUpdates = [
+    showZapretBanner && zapretUpdate ? `Zapret v${zapretUpdate.latest}` : null,
+    showTgwsBanner && tgwsUpdate ? `TgWs v${tgwsUpdate.latest}` : null,
+    showDnsAiBanner && dnsAiUpdate ? `DNS-AI v${dnsAiUpdate.latest}` : null,
+    showAgBanner && agUpdate ? `Antigravity v${agUpdate.latest}` : null
+  ].filter(Boolean) as string[]
+
+  const dismissAllBanners = (): void => {
+    setZapretSessionDismissed(true)
+    setTgwsSessionDismissed(true)
+    setDnsAiSessionDismissed(true)
+    setAgSessionDismissed(true)
+  }
+
+  const anyProcessActive =
+    tgws.state === 'running' ||
+    tgws.state === 'error' ||
+    zapret.state === 'running' ||
+    zapret.state === 'error'
+
   return (
     <BasePage>
       <div className="relative flex flex-col h-full">
-        {(showZapretBanner || showTgwsBanner || showDnsAiBanner || showAgBanner) && (
-          <div className="px-4 pt-2 space-y-2">
-            {showZapretBanner && zapretUpdate && (
-              <UpdateNotice
-                title={`Доступно обновление Zapret — v${zapretUpdate.latest}`}
-                subtitle={`Текущая версия: v${zapretUpdate.installed ?? '?'}`}
-                onDetails={() => navigate('/zapret')}
-                onDismiss={() => setZapretSessionDismissed(true)}
-              />
-            )}
-            {showTgwsBanner && tgwsUpdate && (
-              <UpdateNotice
-                title={`Доступно обновление TgWsProxy — v${tgwsUpdate.latest}`}
-                subtitle={`Текущая версия: v${tgwsUpdate.installed ?? '?'}`}
-                onDetails={() => navigate('/telegram')}
-                onDismiss={() => setTgwsSessionDismissed(true)}
-              />
-            )}
-            {showDnsAiBanner && dnsAiUpdate && (
-              <UpdateNotice
-                title={`Доступно обновление DNS-AI — v${dnsAiUpdate.latest}`}
-                subtitle={`Текущая версия: v${dnsAiUpdate.installed ?? '?'}`}
-                onDetails={() => navigate('/network')}
-                onDismiss={() => setDnsAiSessionDismissed(true)}
-              />
-            )}
-            {showAgBanner && agUpdate && (
-              <UpdateNotice
-                title={`Доступно обновление Antigravity Unlocker — v${agUpdate.latest}`}
-                subtitle={`Текущая версия: v${agUpdate.installed ?? '?'}`}
-                onDetails={() => navigate('/antigravity')}
-                onDismiss={() => setAgSessionDismissed(true)}
-              />
-            )}
+        {pendingUpdates.length > 0 && (
+          <div className="px-4 pt-1 flex justify-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/40 bg-card/65 backdrop-blur-xl px-3.5 py-1 text-xs shadow-sm">
+              <Sparkles className="size-3.5 text-primary shrink-0" />
+              <span className="text-muted-foreground truncate max-w-[360px]">
+                Доступны обновления:{' '}
+                <span className="text-foreground font-medium">{pendingUpdates.join(', ')}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="text-primary hover:underline font-medium cursor-pointer ml-1"
+              >
+                Обновить
+              </button>
+              <button
+                type="button"
+                onClick={dismissAllBanners}
+                className="text-muted-foreground hover:text-foreground cursor-pointer p-0.5"
+                title="Скрыть"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Quick Profile Switcher Pill Bar */}
-        {profiles.length > 0 && (
+        {/* Quick Profile Switcher Pill Bar — only shown when user has multiple profiles */}
+        {profiles.length > 1 && (
           <div className="px-4 pt-2 flex flex-wrap items-center justify-center gap-1.5">
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground mr-1">
               <Layers className="size-3.5" />
@@ -403,7 +381,7 @@ const Home: React.FC = () => {
                 size="sm"
                 variant={p.id === activeProfileId ? 'default' : 'outline'}
                 onClick={() => void handleQuickProfile(p.id)}
-                className="h-7 px-2.5 text-xs"
+                className="h-7 px-2.5 text-xs rounded-full"
               >
                 {p.name}
               </Button>
@@ -431,20 +409,22 @@ const Home: React.FC = () => {
             }
           />
         </div>
-        <div className="flex flex-col items-center justify-center gap-2 pt-4 pb-8">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReloadAll}
-            disabled={reloading}
-            title="Перезагрузить процессы"
-          >
-            <RotateCw className={`size-4 mr-1 ${reloading ? 'animate-spin' : ''}`} />
-            Перезагрузить процессы
-          </Button>
+        <div className="flex items-center justify-center h-12 pb-6">
+          {anyProcessActive && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleReloadAll}
+              disabled={reloading}
+              title="Перезагрузить запущенные процессы"
+              className="rounded-full size-9 bg-card/45 backdrop-blur-md border border-border/30 text-muted-foreground hover:text-foreground"
+            >
+              <RotateCw className={`size-4 ${reloading ? 'animate-spin' : ''}`} />
+            </Button>
+          )}
         </div>
         {appVersion && (
-          <div className="pointer-events-none absolute bottom-2 right-3 text-[11px] text-muted-foreground/70 select-none">
+          <div className="pointer-events-none absolute bottom-2 right-3 text-[11px] text-muted-foreground/50 select-none">
             GhosterNet <span className="font-mono">v{appVersion}</span>
           </div>
         )}

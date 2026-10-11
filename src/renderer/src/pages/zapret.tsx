@@ -11,7 +11,10 @@ import {
   Star,
   Sliders,
   Wand2,
-  Square
+  Square,
+  ChevronDown,
+  ChevronUp,
+  LayoutGrid
 } from 'lucide-react'
 import { useZapretStore } from '@renderer/store/zapret-store'
 import { useZapretTestStore } from '@renderer/store/zapret-test-store'
@@ -68,6 +71,7 @@ const Zapret: React.FC = () => {
   const [binPayloads, setBinPayloads] = useState<string[]>([])
   const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [benchmarking, setBenchmarking] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const zapret = appConfig?.zapret
   const active = zapret?.activeStrategy
@@ -270,7 +274,20 @@ const Zapret: React.FC = () => {
   }, [strategies, onlyFavorites])
 
   return (
-    <BasePage title="Zapret">
+    <BasePage
+      title="Zapret"
+      header={
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate('/services')}
+          className="h-8 text-xs gap-1.5"
+        >
+          <LayoutGrid className="size-3.5" />
+          Сервисы и списки
+        </Button>
+      }
+    >
       <div className="px-4 pb-6 space-y-4">
         {showBanner && updateInfo && (
           <div
@@ -338,19 +355,29 @@ const Zapret: React.FC = () => {
           }
         />
 
-        {/* Advanced DPI & Filter Settings Card */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Sliders className="h-4 w-4 text-muted-foreground" />
-                Режимы фильтрации и обхода
-              </CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
-                Управление режимом IPset, игровыми портами, блокировкой QUIC и совместной работой с
-                VPN.
-              </p>
-            </div>
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="w-full flex items-center justify-between rounded-2xl border border-border/35 bg-card/55 backdrop-blur-xl px-4 py-3 text-left text-xs text-muted-foreground hover:text-foreground transition cursor-pointer"
+        >
+          <span className="inline-flex items-center gap-2 font-medium text-foreground/90">
+            <Sliders className="size-3.5 text-primary" />
+            Дополнительные параметры (IPset, Игровой фильтр, QUIC, Списки IP)
+          </span>
+          {showAdvanced ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+        </button>
+
+        {showAdvanced && (
+          <div className="space-y-4">
+            {/* Advanced DPI & Filter Settings Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sliders className="h-4 w-4 text-muted-foreground" />
+                    Режимы фильтрации и обхода
+                  </CardTitle>
+                </div>
             <Button
               size="sm"
               variant="outline"
@@ -520,14 +547,16 @@ const Zapret: React.FC = () => {
           </CardContent>
         </Card>
 
-        <ZapretIpListCard
-          disabled={isTestRunning || status.state === 'starting' || status.state === 'stopping'}
-          disabledReason={
-            isTestRunning
-              ? 'Идёт тестирование стратегий — управление списком временно недоступно'
-              : 'Подождите завершения переключения Zapret'
-          }
-        />
+            <ZapretIpListCard
+              disabled={isTestRunning || status.state === 'starting' || status.state === 'stopping'}
+              disabledReason={
+                isTestRunning
+                  ? 'Идёт тестирование стратегий — управление списком временно недоступно'
+                  : 'Подождите завершения переключения Zapret'
+              }
+            />
+          </div>
+        )}
 
         <Card>
           <CardHeader

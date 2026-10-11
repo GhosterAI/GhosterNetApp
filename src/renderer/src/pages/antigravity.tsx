@@ -23,7 +23,10 @@ import {
   XCircle,
   Download,
   ArrowUpCircle,
-  X
+  X,
+  ChevronDown,
+  ChevronUp,
+  Sliders
 } from 'lucide-react'
 import BasePage from '@renderer/components/base/base-page'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
@@ -70,6 +73,7 @@ const AntigravityPage: React.FC = () => {
   })
   const [activeLogTab, setActiveLogTab] = useState<'forwarder' | 'watchdog'>('forwarder')
   const [showLogs, setShowLogs] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const [agUpdate, setAgUpdate] = useState<AgUpdateInfo | null>(null)
   const [agUpdating, setAgUpdating] = useState(false)
@@ -723,361 +727,384 @@ const AntigravityPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Capability Switches Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Server className="h-4 w-4 text-muted-foreground" />
-              Модули и маршруты обхода
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {[
-              {
-                cap: 'client_patch',
-                title: 'Разблокировать вход в аккаунт',
-                desc: 'Патч бинарника Language Server и оболочки IDE (ineligible → inexigible)',
-                checked: allPatched || Boolean(status?.settings.client_patch)
-              },
-              {
-                cap: 'auto_patch',
-                title: 'Автопатч Antigravity (Watchdog)',
-                desc: 'Фоновая задача автоматически возвращает патч после обновлений IDE',
-                checked: Boolean(status?.watchdogInstalled && status?.settings.auto_patch)
-              },
-              {
-                cap: 'dns',
-                title: 'Обход через DNS (NRPT + 127.0.0.53)',
-                desc: 'Перехватывает cloudcode-pa и daily-cloudcode-pa через локальный DNS-релей',
-                checked: Boolean(status?.nrptApplied && status?.relayRunning)
-              },
-              {
-                cap: 'local_proxy',
-                title: 'Локальный CONNECT-прокси',
-                desc: `Маршрутизация трафика Language Server через ${status?.proxyUrl || '127.0.0.1:53129'}`,
-                checked: Boolean(status?.settings.local_proxy && status?.proxyEnvSet)
-              },
-              {
-                cap: 'builtin_exits',
-                title: 'Встроенные выходы (Built-in Exits)',
-                desc: 'Использовать встроенные зарубежные прокси-выходы при отказе DNS',
-                checked: Boolean(status?.settings.builtin_exits)
-              },
-              {
-                cap: 'group_proxy',
-                title: 'Прокси из группы (Group Proxy)',
-                desc: 'Использовать выделенный выход по ключу из Telegram-группы',
-                checked: Boolean(status?.settings.group_proxy)
-              },
-              {
-                cap: 'rotate_providers',
-                title: 'Ротация DNS-провайдеров',
-                desc: 'Опрашивать все включённые DNS-серверы параллельно вместо только первого',
-                checked: Boolean(status?.settings.rotate_providers)
-              },
-              {
-                cap: 'verify_tls',
-                title: 'Сверять TLS-сертификаты',
-                desc: 'Проверять подлинность сертификата *.googleapis.com у подменённых IP',
-                checked: Boolean(status?.settings.verify_tls)
-              }
-            ].map((item) => (
-              <div
-                key={item.cap}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background/40 p-3"
-              >
-                <div className="space-y-0.5">
-                  <div className="text-sm font-medium">{item.title}</div>
-                  <div className="text-[11px] text-muted-foreground">{item.desc}</div>
-                </div>
-                <Switch
-                  checked={item.checked}
-                  disabled={Boolean(busyAction)}
-                  onCheckedChange={(val) => void handleToggleCap(item.cap, val, item.title)}
-                />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Live Telemetry & Route Table (gate.json) */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-            <div>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Activity className="h-4 w-4 text-emerald-400" />
-                Живая телеметрия шлюза (gate.json)
-              </CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
-                Текущий маршрут до серверов Google Cloud Code и статистика ответов в реальном времени.
-              </p>
-            </div>
-            {status?.gate?.route && (
-              <span className="rounded bg-emerald-500/20 px-2.5 py-1 text-xs font-mono font-medium text-emerald-400">
-                Активный маршрут: {status.gate.route}
-              </span>
+        {/* Collapsible Advanced Antigravity Settings */}
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="flex w-full items-center justify-between rounded-xl border border-border/40 bg-card/40 backdrop-blur-md px-4 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-card/60 transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <Sliders className="h-3.5 w-3.5 text-primary" />
+              Тонкая настройка маршрутов, прокси, DNS и телеметрии
+            </span>
+            {showAdvanced ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
             )}
-          </CardHeader>
+          </button>
 
-          <CardContent className="space-y-3">
-            {status?.gate ? (
-              <>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                  <div className="rounded border border-border bg-background/40 p-2">
-                    <span className="text-muted-foreground">Loopback 127.0.0.53:</span>{' '}
-                    <span className={status.gate.loopback ? 'text-emerald-400 font-medium' : 'text-amber-300'}>
-                      {status.gate.loopback ? 'Привязан' : 'Ожидание'}
-                    </span>
-                  </div>
-                  <div className="rounded border border-border bg-background/40 p-2">
-                    <span className="text-muted-foreground">VPN-туннель:</span>{' '}
-                    <span className="font-mono">
-                      {status.gate.tunnel ? status.gate.vpn_exit || 'Активен' : 'Нет'}
-                    </span>
-                  </div>
-                  <div className="rounded border border-border bg-background/40 p-2">
-                    <span className="text-muted-foreground">Последний 200 OK:</span>{' '}
-                    <span className="font-mono text-emerald-400">
-                      {status.gate.last_ok?.route || '—'}
-                    </span>
-                  </div>
-                  <div className="rounded border border-border bg-background/40 p-2">
-                    <span className="text-muted-foreground">Перехвачено 400:</span>{' '}
-                    <span className="font-mono">
-                      {status.gate.last_400 ? `${status.gate.last_400.count} (${status.gate.last_400.route})` : '0'}
-                    </span>
-                  </div>
-                </div>
-
-                {status.gate.routes && status.gate.routes.length > 0 && (
-                  <div className="overflow-x-auto rounded-lg border border-border">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-muted/40 text-muted-foreground">
-                        <tr>
-                          <th className="px-3 py-2 font-medium">Маршрут</th>
-                          <th className="px-3 py-2 font-medium">Состояние</th>
-                          <th className="px-3 py-2 font-medium">Пинг</th>
-                          <th className="px-3 py-2 font-medium">Ответов / Отказов</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {status.gate.routes.map((r) => (
-                          <tr key={r.label} className="hover:bg-accent/20">
-                            <td className="px-3 py-2 font-medium">{r.label}</td>
-                            <td className="px-3 py-2">
-                              {r.usable ? (
-                                <span className="text-emerald-400">
-                                  Доступен {r.proven ? '(проверен)' : ''}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">Недоступен</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 font-mono">
-                              {r.latency_ms != null ? `${r.latency_ms} мс` : '—'}
-                            </td>
-                            <td className="px-3 py-2 font-mono">
-                              {r.answers} / {r.refusals}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {status.gate.blockers && status.gate.blockers.length > 0 && (
-                  <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 space-y-1 text-xs">
-                    <div className="font-semibold text-destructive">
-                      Обнаружены сетевые блокировки / конфликты портов:
+          {showAdvanced && (
+            <div className="mt-3 space-y-4">
+              {/* Capability Switches Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Server className="h-4 w-4 text-muted-foreground" />
+                    Модули и маршруты обхода
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[
+                    {
+                      cap: 'client_patch',
+                      title: 'Разблокировать вход в аккаунт',
+                      desc: 'Патч бинарника Language Server и оболочки IDE (ineligible → inexigible)',
+                      checked: allPatched || Boolean(status?.settings.client_patch)
+                    },
+                    {
+                      cap: 'auto_patch',
+                      title: 'Автопатч Antigravity (Watchdog)',
+                      desc: 'Фоновая задача автоматически возвращает патч после обновлений IDE',
+                      checked: Boolean(status?.watchdogInstalled && status?.settings.auto_patch)
+                    },
+                    {
+                      cap: 'dns',
+                      title: 'Обход через DNS (NRPT + 127.0.0.53)',
+                      desc: 'Перехватывает cloudcode-pa и daily-cloudcode-pa через локальный DNS-релей',
+                      checked: Boolean(status?.nrptApplied && status?.relayRunning)
+                    },
+                    {
+                      cap: 'local_proxy',
+                      title: 'Локальный CONNECT-прокси',
+                      desc: `Маршрутизация трафика Language Server через ${status?.proxyUrl || '127.0.0.1:53129'}`,
+                      checked: Boolean(status?.settings.local_proxy && status?.proxyEnvSet)
+                    },
+                    {
+                      cap: 'builtin_exits',
+                      title: 'Встроенные выходы (Built-in Exits)',
+                      desc: 'Использовать встроенные зарубежные прокси-выходы при отказе DNS',
+                      checked: Boolean(status?.settings.builtin_exits)
+                    },
+                    {
+                      cap: 'group_proxy',
+                      title: 'Прокси из группы (Group Proxy)',
+                      desc: 'Использовать выделенный выход по ключу из Telegram-группы',
+                      checked: Boolean(status?.settings.group_proxy)
+                    },
+                    {
+                      cap: 'rotate_providers',
+                      title: 'Ротация DNS-провайдеров',
+                      desc: 'Опрашивать все включённые DNS-серверы параллельно вместо только первого',
+                      checked: Boolean(status?.settings.rotate_providers)
+                    },
+                    {
+                      cap: 'verify_tls',
+                      title: 'Сверять TLS-сертификаты',
+                      desc: 'Проверять подлинность сертификата *.googleapis.com у подменённых IP',
+                      checked: Boolean(status?.settings.verify_tls)
+                    }
+                  ].map((item) => (
+                    <div
+                      key={item.cap}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background/40 p-3"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-medium">{item.title}</div>
+                        <div className="text-[11px] text-muted-foreground">{item.desc}</div>
+                      </div>
+                      <Switch
+                        checked={item.checked}
+                        disabled={Boolean(busyAction)}
+                        onCheckedChange={(val) => void handleToggleCap(item.cap, val, item.title)}
+                      />
                     </div>
-                    {status.gate.blockers.map((b, i) => (
-                      <div key={i} className="font-mono text-destructive/90">
-                        {b.what} ({b.addr}): {b.cause} {b.by ? `[процесс: ${b.by}]` : ''} — {b.error}
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Live Telemetry & Route Table (gate.json) */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+                  <div>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-emerald-400" />
+                      Живая телеметрия шлюза (gate.json)
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Текущий маршрут до серверов Google Cloud Code и статистика ответов в реальном времени.
+                    </p>
+                  </div>
+                  {status?.gate?.route && (
+                    <span className="rounded bg-emerald-500/20 px-2.5 py-1 text-xs font-mono font-medium text-emerald-400">
+                      Активный маршрут: {status.gate.route}
+                    </span>
+                  )}
+                </CardHeader>
+
+                <CardContent className="space-y-3">
+                  {status?.gate ? (
+                    <>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div className="rounded border border-border bg-background/40 p-2">
+                          <span className="text-muted-foreground">Loopback 127.0.0.53:</span>{' '}
+                          <span className={status.gate.loopback ? 'text-emerald-400 font-medium' : 'text-amber-300'}>
+                            {status.gate.loopback ? 'Привязан' : 'Ожидание'}
+                          </span>
+                        </div>
+                        <div className="rounded border border-border bg-background/40 p-2">
+                          <span className="text-muted-foreground">VPN-туннель:</span>{' '}
+                          <span className="font-mono">
+                            {status.gate.tunnel ? status.gate.vpn_exit || 'Активен' : 'Нет'}
+                          </span>
+                        </div>
+                        <div className="rounded border border-border bg-background/40 p-2">
+                          <span className="text-muted-foreground">Последний 200 OK:</span>{' '}
+                          <span className="font-mono text-emerald-400">
+                            {status.gate.last_ok?.route || '—'}
+                          </span>
+                        </div>
+                        <div className="rounded border border-border bg-background/40 p-2">
+                          <span className="text-muted-foreground">Перехвачено 400:</span>{' '}
+                          <span className="font-mono">
+                            {status.gate.last_400 ? `${status.gate.last_400.count} (${status.gate.last_400.route})` : '0'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {status.gate.routes && status.gate.routes.length > 0 && (
+                        <div className="overflow-x-auto rounded-lg border border-border">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-muted/40 text-muted-foreground">
+                              <tr>
+                                <th className="px-3 py-2 font-medium">Маршрут</th>
+                                <th className="px-3 py-2 font-medium">Состояние</th>
+                                <th className="px-3 py-2 font-medium">Пинг</th>
+                                <th className="px-3 py-2 font-medium">Ответов / Отказов</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                              {status.gate.routes.map((r) => (
+                                <tr key={r.label} className="hover:bg-accent/20">
+                                  <td className="px-3 py-2 font-medium">{r.label}</td>
+                                  <td className="px-3 py-2">
+                                    {r.usable ? (
+                                      <span className="text-emerald-400">
+                                        Доступен {r.proven ? '(проверен)' : ''}
+                                      </span>
+                                    ) : (
+                                      <span className="text-muted-foreground">Недоступен</span>
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-2 font-mono">
+                                    {r.latency_ms != null ? `${r.latency_ms} мс` : '—'}
+                                  </td>
+                                  <td className="px-3 py-2 font-mono">
+                                    {r.answers} / {r.refusals}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {status.gate.blockers && status.gate.blockers.length > 0 && (
+                        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 space-y-1 text-xs">
+                          <div className="font-semibold text-destructive">
+                            Обнаружены сетевые блокировки / конфликты портов:
+                          </div>
+                          {status.gate.blockers.map((b, i) => (
+                            <div key={i} className="font-mono text-destructive/90">
+                              {b.what} ({b.addr}): {b.cause} {b.by ? `[процесс: ${b.by}]` : ''} — {b.error}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-xs text-muted-foreground py-2">
+                      Служба DNS-релея ещё не записала телеметрию или остановлена. Нажмите «Включить всё»
+                      для запуска.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Custom Proxy, Group Key & DNS Providers */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <KeyRound className="h-4 w-4 text-muted-foreground" />
+                      Свой HTTP-прокси и Ключ группы
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Свой HTTP-прокси (http://user:pass@host:port)</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={ownProxyInput}
+                          onChange={(e) => setOwnProxyInput(e.target.value)}
+                          placeholder="http://user:pass@1.2.3.4:8080"
+                          className="font-mono text-xs h-8"
+                        />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-8"
+                          onClick={() => void handleSaveOwnProxy()}
+                          disabled={Boolean(busyAction)}
+                        >
+                          Сохранить
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">Ключ прокси из группы (AG1-...)</Label>
+                        {status?.pcCode && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void writeClipboard(status.pcCode)
+                              toast.success(`Код ПК скопирован: ${status.pcCode}`)
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] font-mono text-primary hover:underline cursor-pointer"
+                          >
+                            Код ПК: {status.pcCode}
+                            <Copy className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          value={groupKeyInput}
+                          onChange={(e) => setGroupKeyInput(e.target.value)}
+                          placeholder="AG1-..."
+                          className="font-mono text-xs h-8"
+                        />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-8"
+                          onClick={() => void handleSaveGroupKey()}
+                          disabled={Boolean(busyAction)}
+                        >
+                          Применить
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Server className="h-4 w-4 text-muted-foreground" />
+                      Пул DNS-провайдеров подмены
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {(status?.providers ?? []).map((prov, index) => (
+                      <div
+                        key={prov.name}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background/40 px-3 py-2"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-muted-foreground">#{index + 1}</span>
+                          <span className="text-sm font-medium">{prov.name}</span>
+                          {prov.name === 'dns-ai.ru' && (
+                            <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-400">
+                              DoH HTTP/2
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            disabled={index === 0}
+                            onClick={() => void handleMoveProvider(index, -1)}
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            disabled={index === (status?.providers.length ?? 1) - 1}
+                            onClick={() => void handleMoveProvider(index, 1)}
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </Button>
+                          <Switch
+                            checked={prov.enabled}
+                            onCheckedChange={(val) => void handleToggleProvider(prov.name, val)}
+                          />
+                        </div>
                       </div>
                     ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-xs text-muted-foreground py-2">
-                Служба DNS-релея ещё не записала телеметрию или остановлена. Нажмите «Включить всё»
-                для запуска.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Custom Proxy, Group Key & DNS Providers */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <KeyRound className="h-4 w-4 text-muted-foreground" />
-                Свой HTTP-прокси и Ключ группы
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Свой HTTP-прокси (http://user:pass@host:port)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={ownProxyInput}
-                    onChange={(e) => setOwnProxyInput(e.target.value)}
-                    placeholder="http://user:pass@1.2.3.4:8080"
-                    className="font-mono text-xs h-8"
-                  />
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="h-8"
-                    onClick={() => void handleSaveOwnProxy()}
-                    disabled={Boolean(busyAction)}
-                  >
-                    Сохранить
-                  </Button>
-                </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs">Ключ прокси из группы (AG1-...)</Label>
-                  {status?.pcCode && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void writeClipboard(status.pcCode)
-                        toast.success(`Код ПК скопирован: ${status.pcCode}`)
-                      }}
-                      className="inline-flex items-center gap-1 text-[11px] font-mono text-primary hover:underline cursor-pointer"
-                    >
-                      Код ПК: {status.pcCode}
-                      <Copy className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={groupKeyInput}
-                    onChange={(e) => setGroupKeyInput(e.target.value)}
-                    placeholder="AG1-..."
-                    className="font-mono text-xs h-8"
-                  />
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="h-8"
-                    onClick={() => void handleSaveGroupKey()}
-                    disabled={Boolean(busyAction)}
-                  >
-                    Применить
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Server className="h-4 w-4 text-muted-foreground" />
-                Пул DNS-провайдеров подмены
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {(status?.providers ?? []).map((prov, index) => (
-                <div
-                  key={prov.name}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background/40 px-3 py-2"
-                >
+              {/* Logs Viewer Card */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    Журнал фоновых служб Antigravity Unlocker
+                  </CardTitle>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-muted-foreground">#{index + 1}</span>
-                    <span className="text-sm font-medium">{prov.name}</span>
-                    {prov.name === 'dns-ai.ru' && (
-                      <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-400">
-                        DoH HTTP/2
-                      </span>
+                    {showLogs && (
+                      <Button size="sm" variant="ghost" onClick={() => void loadLogs()}>
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Обновить
+                      </Button>
                     )}
-                  </div>
-                  <div className="flex items-center gap-1.5">
                     <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      disabled={index === 0}
-                      onClick={() => void handleMoveProvider(index, -1)}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowLogs((v) => !v)}
                     >
-                      <ArrowUp className="h-3.5 w-3.5" />
+                      {showLogs ? 'Скрыть журнал' : 'Показать журнал'}
                     </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      disabled={index === (status?.providers.length ?? 1) - 1}
-                      onClick={() => void handleMoveProvider(index, 1)}
-                    >
-                      <ArrowDown className="h-3.5 w-3.5" />
-                    </Button>
-                    <Switch
-                      checked={prov.enabled}
-                      onCheckedChange={(val) => void handleToggleProvider(prov.name, val)}
-                    />
                   </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+                </CardHeader>
 
-        {/* Logs Viewer Card */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              Журнал фоновых служб Antigravity Unlocker
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {showLogs && (
-                <Button size="sm" variant="ghost" onClick={() => void loadLogs()}>
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Обновить
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowLogs((v) => !v)}
-              >
-                {showLogs ? 'Скрыть журнал' : 'Показать журнал'}
-              </Button>
+                {showLogs && (
+                  <CardContent className="space-y-3">
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant={activeLogTab === 'forwarder' ? 'default' : 'outline'}
+                        onClick={() => setActiveLogTab('forwarder')}
+                      >
+                        forwarder.log (DNS + Прокси)
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={activeLogTab === 'watchdog' ? 'default' : 'outline'}
+                        onClick={() => setActiveLogTab('watchdog')}
+                      >
+                        watchdog.log (Автопатч)
+                      </Button>
+                    </div>
+                    <pre className="rounded-lg border border-border bg-background/70 p-3 text-[11px] font-mono whitespace-pre-wrap max-h-64 overflow-y-auto text-foreground/90">
+                      {(activeLogTab === 'forwarder' ? logs.forwarder : logs.watchdog) ||
+                        'Журнал пока пуст.'}
+                    </pre>
+                  </CardContent>
+                )}
+              </Card>
             </div>
-          </CardHeader>
-
-          {showLogs && (
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant={activeLogTab === 'forwarder' ? 'default' : 'outline'}
-                  onClick={() => setActiveLogTab('forwarder')}
-                >
-                  forwarder.log (DNS + Прокси)
-                </Button>
-                <Button
-                  size="sm"
-                  variant={activeLogTab === 'watchdog' ? 'default' : 'outline'}
-                  onClick={() => setActiveLogTab('watchdog')}
-                >
-                  watchdog.log (Автопатч)
-                </Button>
-              </div>
-              <pre className="rounded-lg border border-border bg-background/70 p-3 text-[11px] font-mono whitespace-pre-wrap max-h-64 overflow-y-auto text-foreground/90">
-                {(activeLogTab === 'forwarder' ? logs.forwarder : logs.watchdog) ||
-                  'Журнал пока пуст.'}
-              </pre>
-            </CardContent>
           )}
-        </Card>
+        </div>
       </div>
     </BasePage>
   )
