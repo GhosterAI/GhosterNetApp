@@ -46,6 +46,18 @@ import {
 import PowerIcon from '@renderer/assets/on_icon.svg'
 import PauseIcon from '@renderer/assets/pause_icon.svg'
 
+function getCountryFlag(code?: string): string {
+  if (!code || code.length !== 2) return ''
+  try {
+    const upper = code.toUpperCase()
+    const first = upper.codePointAt(0)! - 0x41 + 0x1f1e6
+    const second = upper.codePointAt(1)! - 0x41 + 0x1f1e6
+    return String.fromCodePoint(first, second)
+  } catch {
+    return ''
+  }
+}
+
 function stripEmojis(str?: string): string {
   if (!str) return ''
   return str
@@ -685,9 +697,11 @@ const VpnPage: React.FC = () => {
                     )}
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      {/* Country Code Badge */}
-                      <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-mono text-[10px] font-bold tracking-wider shrink-0 select-none">
-                        {server.countryCode ? server.countryCode.toUpperCase() : <Server className="size-3.5 text-primary" />}
+                      {/* Country Flag (Photo 1 style) */}
+                      <div className="size-8 rounded-xl bg-card/60 border border-border/40 flex items-center justify-center shrink-0 select-none text-xl shadow-xs">
+                        {getCountryFlag(server.countryCode) || (
+                          <Server className="size-3.5 text-primary" />
+                        )}
                       </div>
 
                       {/* Name & Type */}
@@ -1002,8 +1016,10 @@ const VpnPage: React.FC = () => {
             {/* Active Server HUD Pill (Photo 1 style) */}
             {activeServer ? (
               <div className="mt-4 px-4 py-2 rounded-2xl border border-border/40 bg-card/60 backdrop-blur-md flex items-center gap-3 shadow-xs">
-                <div className="size-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary font-mono text-xs font-bold tracking-wider shrink-0 select-none shadow-xs">
-                  {activeServer.countryCode ? activeServer.countryCode.toUpperCase() : <Server className="size-4 text-primary" />}
+                <div className="size-11 rounded-2xl bg-card/70 border border-border/50 flex items-center justify-center shrink-0 select-none text-2xl shadow-sm">
+                  {getCountryFlag(activeServer.countryCode) || (
+                    <Server className="size-5 text-primary" />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">

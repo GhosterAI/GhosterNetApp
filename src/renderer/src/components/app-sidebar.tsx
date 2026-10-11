@@ -2,7 +2,8 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from 'next-themes'
-import { Home as HomeIcon, ScrollText, Settings as SettingsIcon, Info as InfoIcon, Blocks, Rocket, Shield } from 'lucide-react'
+import { Home as HomeIcon, ScrollText, Settings as SettingsIcon, Info as InfoIcon, Blocks, Rocket, Globe } from 'lucide-react'
+import { cn } from '@renderer/lib/utils'
 import ZapretIcon from '@renderer/components/zapret-icon'
 import TelegramIcon from '@renderer/components/telegram-icon'
 import logoDark from '@renderer/assets/logo.png'
@@ -21,7 +22,7 @@ import {
 
 const nav = [
   { key: 'home',        path: '/home',        icon: HomeIcon,     label: 'Главная' },
-  { key: 'vpn',         path: '/vpn',         icon: Shield,       label: 'VPN' },
+  { key: 'vpn',         path: '/vpn',         icon: Globe,        label: 'VPN' },
   { key: 'telegram',    path: '/telegram',    icon: TelegramIcon, label: 'Telegram' },
   { key: 'zapret',      path: '/zapret',      icon: ZapretIcon,   label: 'Zapret' },
   { key: 'antigravity', path: '/antigravity', icon: Rocket,       label: 'Antigravity' },
@@ -58,12 +59,17 @@ const AppSidebar: React.FC = () => {
                 return (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton
-                      className="cursor-pointer"
+                      className={cn(
+                        "cursor-pointer rounded-xl transition-all duration-200 border",
+                        isActive
+                          ? "bg-primary/15 border-primary/40 text-primary font-medium shadow-xs"
+                          : "border-transparent text-muted-foreground hover:bg-muted/40 hover:border-border/30 hover:text-foreground"
+                      )}
                       tooltip={item.label}
                       isActive={isActive}
                       onClick={() => navigate(item.path)}
                     >
-                      <Icon className="size-4" />
+                      <Icon className="size-4 shrink-0" />
                       <span>{t(`sider.${item.key}`, { defaultValue: item.label })}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -80,9 +86,14 @@ const AppSidebar: React.FC = () => {
               tooltip="Логи"
               isActive={location.pathname.startsWith('/logs')}
               onClick={() => navigate('/logs')}
-              className="cursor-pointer text-muted-foreground hover:text-foreground"
+              className={cn(
+                "cursor-pointer rounded-xl transition-all duration-200 border",
+                location.pathname.startsWith('/logs')
+                  ? "bg-primary/15 border-primary/40 text-primary font-medium shadow-xs"
+                  : "border-transparent text-muted-foreground hover:bg-muted/40 hover:border-border/30 hover:text-foreground"
+              )}
             >
-              <ScrollText className="size-4" />
+              <ScrollText className="size-4 shrink-0" />
               <span>Логи</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -91,9 +102,14 @@ const AppSidebar: React.FC = () => {
               tooltip="О программе"
               isActive={location.pathname.startsWith('/about')}
               onClick={() => navigate('/about')}
-              className="cursor-pointer text-muted-foreground hover:text-foreground"
+              className={cn(
+                "cursor-pointer rounded-xl transition-all duration-200 border",
+                location.pathname.startsWith('/about')
+                  ? "bg-primary/15 border-primary/40 text-primary font-medium shadow-xs"
+                  : "border-transparent text-muted-foreground hover:bg-muted/40 hover:border-border/30 hover:text-foreground"
+              )}
             >
-              <InfoIcon className="size-4" />
+              <InfoIcon className="size-4 shrink-0" />
               <span>О программе</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

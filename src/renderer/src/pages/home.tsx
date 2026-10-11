@@ -41,6 +41,18 @@ interface PowerToggleProps {
   disabledReason?: string
 }
 
+function getCountryFlag(code?: string): string {
+  if (!code || code.length !== 2) return ''
+  try {
+    const upper = code.toUpperCase()
+    const first = upper.codePointAt(0)! - 0x41 + 0x1f1e6
+    const second = upper.codePointAt(1)! - 0x41 + 0x1f1e6
+    return String.fromCodePoint(first, second)
+  } catch {
+    return ''
+  }
+}
+
 function stripEmojis(str?: string): string {
   if (!str) return ''
   return str
@@ -476,7 +488,7 @@ const Home: React.FC = () => {
             onToggle={toggleVpn}
             version={
               vpn.activeServer
-                ? `${stripEmojis(vpn.activeServer.name) || vpn.activeServer.name}`
+                ? `${getCountryFlag(vpn.activeServer.countryCode)} ${stripEmojis(vpn.activeServer.name) || vpn.activeServer.name}`.trim()
                 : appConfig?.vpn?.servers?.length
                   ? `${appConfig.vpn.servers.length} серв.`
                   : 'sing-box'
@@ -524,8 +536,13 @@ const Home: React.FC = () => {
             <div className="inline-flex flex-wrap items-center justify-center gap-2.5 rounded-full border border-border/40 bg-card/65 backdrop-blur-xl px-4 py-1.5 text-xs shadow-sm">
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <ShieldCheck className="size-3.5 text-primary" />
-                <span className="font-medium text-foreground">
-                  VPN: {stripEmojis(vpn.activeServer?.name) || vpn.activeServer?.name || 'Активен'}
+                <span className="font-medium text-foreground flex items-center gap-1.5">
+                  {vpn.activeServer?.countryCode && (
+                    <span className="text-sm select-none leading-none">
+                      {getCountryFlag(vpn.activeServer.countryCode)}
+                    </span>
+                  )}
+                  <span>VPN: {stripEmojis(vpn.activeServer?.name) || vpn.activeServer?.name || 'Активен'}</span>
                 </span>
               </span>
               <span className="h-3 w-px bg-border/40" />
