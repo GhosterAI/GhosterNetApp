@@ -4,10 +4,10 @@
 
   <img src="https://raw.githubusercontent.com/GhosterAI/GhosterNet/main/assets/ghost-sculpture.svg" width="160" height="160" alt="GhosterNet Logo" />
 
-  # GhosterNet v2.5.0
+  # GhosterNet v2.7.0
   
   **Единый швейцарский нож сетевой свободы для Windows 10 & 11 (x64)**  
-  *Обход DPI, ускорение Telegram MTProto, зашифрованный DNS-AI, Psiphon VPN & Proxy, разблокировка Google Antigravity IDE и «Доктор сети» в один клик.*
+  *Обход DPI (Zapret), Telegram MTProto, зашифрованный DNS-AI, Universal VPN (sing-box + Wintun TUN), AmneziaWG (AWG), Psiphon VPN & Proxy, разблокировка Google Antigravity IDE и «Доктор сети» в один клик.*
 
   <p align="center">
     <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest"><img src="https://img.shields.io/github/v/release/GhosterAI/GhosterNetApp?style=for-the-badge&logo=windows&logoColor=white&color=7c3aed" alt="Latest Release"></a>
