@@ -164,3 +164,25 @@ export function psiphonBinaryPath(): string {
   if (existsSync(rt)) return rt
   return path.join(resourcesDir(), 'psiphon', 'psiphon-tunnel-core.exe')
 }
+
+export function vpnRuntimeDir(): string {
+  return path.join(runtimeDir(), 'vpn')
+}
+
+export function vpnBinaryPath(): string {
+  const rt = path.join(vpnRuntimeDir(), 'sing-box.exe')
+  if (existsSync(rt)) return rt
+  return path.join(resourcesDir(), 'vpn', 'sing-box.exe')
+}
+
+export function wintunDllPath(): string {
+  const rt = path.join(vpnRuntimeDir(), 'wintun.dll')
+  if (existsSync(rt)) return rt
+  return path.join(resourcesDir(), 'vpn', 'wintun.dll')
+}
+
+export function wireproxyBinaryPath(): string {
+  const rt = path.join(vpnRuntimeDir(), 'wireproxy.exe')
+  if (existsSync(rt)) return rt
+  return path.join(resourcesDir(), 'vpn', 'wireproxy.exe')
+}

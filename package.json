@@ -1,7 +1,7 @@
 {
   "name": "ghosternet",
-  "version": "2.5.0",
-  "description": "GhosterNet — DPI Bypass, Telegram WS Proxy, DNS-AI, Antigravity Unlocker & Psiphon VPN",
+  "version": "2.6.0",
+  "description": "GhosterNet — DPI Bypass, Telegram WS Proxy, DNS-AI, Antigravity Unlocker, Psiphon & Universal VPN (VLESS, AmneziaWG, Hysteria 2)",
   "main": "./out/main/index.js",
   "author": "GhosterAI",
   "homepage": "https://github.com/GhosterAI/GhosterNetApp",

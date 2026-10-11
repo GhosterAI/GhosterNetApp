@@ -15,6 +15,7 @@ import { getAppConfig, patchAppConfig } from '../config'
 import { getDnsAiStatus, enableDnsAi, disableDnsAi } from '../core/dns-ai'
 import { getAgStatus, enableAgAll, disableAgAll } from '../core/ag-unlocker'
 import { getPsiphonStatus, startPsiphon, stopPsiphon, restartPsiphon } from '../core/psiphon'
+import { getVpnStatus, startVpn, stopVpn, restartVpn } from '../core/vpn'
 import { checkAppUpdate } from '../core/app-updater'
 import { checkZapretUpdate } from '../core/zapret-updater'
 import { checkTgwsUpdate } from '../core/tgws-updater'
@@ -79,11 +80,11 @@ export async function createTray(): Promise<void> {
     const tgws = getTgwsStatus()
     const zapret = getZapretStatus()
     const psiphon = getPsiphonStatus()
+    const vpn = getVpnStatus()
     const cfg = await getAppConfig().catch(() => null)
     const strategies = await listStrategies().catch(() => [])
     const profileData = await listProfiles().catch(() => ({ activeProfileId: 'default', profiles: [] }))
-
-    const anyRunning = tgws.state === 'running' || zapret.state === 'running' || psiphon.state === 'running'
+    const anyRunning = tgws.state === 'running' || zapret.state === 'running' || psiphon.state === 'running' || vpn.state === 'running'
     const dnsAi = await getDnsAiStatus().catch(() => null)
     const ag = await getAgStatus(false).catch(() => null)
 
@@ -100,6 +101,7 @@ export async function createTray(): Promise<void> {
     if (zapret.state === 'running') activeModules.push('Zapret')
     if (tgws.state === 'running') activeModules.push('Telegram')
     if (psiphon.state === 'running') activeModules.push('Psiphon')
+    if (vpn.state === 'running') activeModules.push('VPN')
     if (dnsAiRunning) activeModules.push('DNS-AI')
     if (agRunning) activeModules.push('Antigravity')
 
@@ -260,6 +262,32 @@ export async function createTray(): Promise<void> {
             enabled: psiphon.state === 'running',
             click: () => {
               stopPsiphon().then(() => rebuild()).catch(() => void 0)
+            }
+          }
+        ]
+      },
+      {
+        label: `VPN (sing-box): ${stateLabel(vpn.state)}`,
+        submenu: [
+          {
+            label: 'Запустить VPN',
+            enabled: vpn.state !== 'running' && vpn.state !== 'starting',
+            click: () => {
+              startVpn().then(() => rebuild()).catch(() => void 0)
+            }
+          },
+          {
+            label: 'Перезапустить VPN',
+            enabled: vpn.state === 'running',
+            click: () => {
+              restartVpn().then(() => rebuild()).catch(() => void 0)
+            }
+          },
+          {
+            label: 'Остановить VPN',
+            enabled: vpn.state === 'running',
+            click: () => {
+              stopVpn().then(() => rebuild()).catch(() => void 0)
             }
           }
         ]

@@ -628,6 +628,30 @@ export const agInstallUpdate = (
 export const agDismissUpdate = (tag: string): Promise<void> =>
   invoke('ag:dismissUpdate', tag)
 
+// ---- Universal VPN (sing-box + VLESS / Reality / Hysteria2) --------------
+export const vpnStatus = (): Promise<VpnStatus> => invoke('vpn:status')
+export const vpnStart = (): Promise<void> => invoke('vpn:start')
+export const vpnStop = (): Promise<void> => invoke('vpn:stop')
+export const vpnRestart = (): Promise<void> => invoke('vpn:restart')
+export interface VpnAddResult {
+  subscription?: VpnSubscription
+  servers: VpnServer[]
+}
+export const vpnAddSubscription = (input: string): Promise<VpnAddResult> =>
+  invoke('vpn:addSubscription', input)
+export const vpnUpdateSubscription = (id: string): Promise<VpnSubscription> =>
+  invoke('vpn:updateSubscription', id)
+export const vpnDeleteSubscription = (id: string): Promise<void> =>
+  invoke('vpn:deleteSubscription', id)
+export const vpnSelectServer = (serverId: string): Promise<void> =>
+  invoke('vpn:selectServer', serverId)
+export const vpnTestLatency = (serverId?: string): Promise<Record<string, number | null>> =>
+  invoke('vpn:testLatency', serverId)
+export const vpnSetRoutingMode = (mode: VpnRoutingMode): Promise<void> =>
+  invoke('vpn:setRoutingMode', mode)
+export const vpnSetTunMode = (enabled: boolean): Promise<void> =>
+  invoke('vpn:setTunMode', enabled)
+
 // ---- App control ------------------------------------------------------------
 export const appQuit = (): Promise<void> => invoke('app:quit')
 export const appRelaunch = (): Promise<void> => invoke('app:relaunch')

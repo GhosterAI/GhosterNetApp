@@ -15,6 +15,7 @@ const sourceColor: Record<CoreSource, string> = {
   zapret: 'text-violet-500',
   dns: 'text-emerald-500',
   psiphon: 'text-amber-500',
+  vpn: 'text-indigo-400',
   app: 'text-muted-foreground'
 }
 
@@ -24,6 +25,7 @@ const sourceLabels: Record<'all' | CoreSource, string> = {
   zapret: 'zapret',
   dns: 'dns',
   psiphon: 'psiphon',
+  vpn: 'vpn',
   app: 'система'
 }
 

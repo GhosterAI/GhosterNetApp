@@ -16,6 +16,7 @@ import { attachTgwsStore } from '@renderer/store/tgws-store'
 import { attachZapretStore } from '@renderer/store/zapret-store'
 import { attachZapretTestStore } from '@renderer/store/zapret-test-store'
 import { attachPsiphonStore } from '@renderer/store/psiphon-store'
+import { attachVpnStore } from '@renderer/store/vpn-store'
 import bgDark from '@renderer/assets/black.jpg'
 import bgLight from '@renderer/assets/white.jpg'
 
@@ -43,12 +44,14 @@ const App: React.FC = () => {
     const d3 = attachZapretStore()
     const d4 = attachZapretTestStore()
     const d5 = attachPsiphonStore()
+    const d6 = attachVpnStore()
     return () => {
       d1()
       d2()
       d3()
       d4()
       d5()
+      d6()
     }
   }, [])
 

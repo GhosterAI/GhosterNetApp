@@ -139,6 +139,19 @@ import {
   togglePsiphonSystemProxy,
   setPsiphonRegion
 } from '../core/psiphon'
+import {
+  getVpnStatus,
+  startVpn,
+  stopVpn,
+  restartVpn,
+  addVpnSubscriptionOrKeys,
+  updateVpnSubscription,
+  deleteVpnSubscription,
+  selectVpnServer,
+  setVpnRoutingMode,
+  setVpnTunMode,
+  testVpnLatencies
+} from '../core/vpn'
 import { execFile } from 'node:child_process'
 import { writeFileSync, unlinkSync } from 'node:fs'
 import path from 'node:path'
@@ -577,6 +590,19 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('psiphon:restart', h(() => restartPsiphon()))
   ipcMain.handle('psiphon:setSystemProxy', h((enable) => togglePsiphonSystemProxy(Boolean(enable))))
   ipcMain.handle('psiphon:setRegion', h((region) => setPsiphonRegion(String(region || ''))))
+
+  // ---- Universal VPN (sing-box + VLESS / Reality / Hysteria2) --------------
+  ipcMain.handle('vpn:status', h(() => getVpnStatus()))
+  ipcMain.handle('vpn:start', h(() => startVpn()))
+  ipcMain.handle('vpn:stop', h(() => stopVpn()))
+  ipcMain.handle('vpn:restart', h(() => restartVpn()))
+  ipcMain.handle('vpn:addSubscription', h((input) => addVpnSubscriptionOrKeys(String(input || ''))))
+  ipcMain.handle('vpn:updateSubscription', h((id) => updateVpnSubscription(String(id))))
+  ipcMain.handle('vpn:deleteSubscription', h((id) => deleteVpnSubscription(String(id))))
+  ipcMain.handle('vpn:selectServer', h((serverId) => selectVpnServer(String(serverId))))
+  ipcMain.handle('vpn:testLatency', h((serverId) => testVpnLatencies(serverId as string | undefined)))
+  ipcMain.handle('vpn:setRoutingMode', h((mode) => setVpnRoutingMode(mode as VpnRoutingMode)))
+  ipcMain.handle('vpn:setTunMode', h((enabled) => setVpnTunMode(Boolean(enabled))))
 
   // ---- Quit / restart -----------------------------------------------------
   ipcMain.handle('app:quit', h(() => app.quit()))

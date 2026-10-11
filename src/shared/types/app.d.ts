@@ -133,6 +133,66 @@ interface AppConfig {
   dnsAi?: DnsAiConfig
   agUnlocker?: AgUnlockerConfig
   psiphon?: PsiphonConfig
+  vpn?: VpnConfig
+}
+
+type VpnRoutingMode = 'bypass-ru' | 'global' | 'proxy-only'
+type VpnProtocolType =
+  | 'vless'
+  | 'vmess'
+  | 'trojan'
+  | 'shadowsocks'
+  | 'hysteria2'
+  | 'tuic'
+  | 'wireguard'
+  | 'awg'
+  | 'unknown'
+
+interface VpnServer {
+  id: string
+  name: string
+  type: VpnProtocolType
+  server: string
+  serverPort: number
+  latencyMs?: number | null
+  countryCode?: string
+  rawUri: string
+  subscriptionId?: string
+  details?: Record<string, unknown>
+}
+
+interface VpnSubscription {
+  id: string
+  name: string
+  url: string
+  updatedAt?: number
+  uploadBytes?: number
+  downloadBytes?: number
+  totalBytes?: number
+  expireTimestamp?: number
+  serverCount?: number
+}
+
+interface VpnConfig {
+  enabled: boolean
+  autoStart?: boolean
+  routingMode: VpnRoutingMode
+  tunMode: boolean
+  selectedServerId?: string
+  subscriptions: VpnSubscription[]
+  servers: VpnServer[]
+  localHttpPort?: number
+  localSocksPort?: number
+}
+
+interface VpnStatus extends CoreStatus {
+  activeServer?: VpnServer
+  routingMode: VpnRoutingMode
+  tunMode: boolean
+  localHttpPort?: number
+  localSocksPort?: number
+  uploadSpeedBps?: number
+  downloadSpeedBps?: number
 }
 
 interface PsiphonConfig {

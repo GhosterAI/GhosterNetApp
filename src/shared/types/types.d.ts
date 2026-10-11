@@ -10,7 +10,7 @@ type AccentColor =
   | 'indigo'
   | 'teal'
   | 'orange'
-type CoreSource = 'tgws' | 'zapret' | 'dns' | 'app' | 'psiphon'
+type CoreSource = 'tgws' | 'zapret' | 'dns' | 'app' | 'psiphon' | 'vpn'
 
 // Unified log line shown in the Logs page. Type is the severity-ish level,
 // payload is the text, source distinguishes which subsystem produced it.

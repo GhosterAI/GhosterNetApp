@@ -103,5 +103,16 @@ export const defaultConfig: AppConfig = {
     socksPort: 20808,
     egressRegion: '',
     systemProxy: false
+  },
+  vpn: {
+    enabled: false,
+    autoStart: false,
+    routingMode: 'bypass-ru',
+    tunMode: true,
+    selectedServerId: undefined,
+    subscriptions: [],
+    servers: [],
+    localHttpPort: 2080,
+    localSocksPort: 2081
   }
 }
