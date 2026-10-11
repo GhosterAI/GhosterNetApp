@@ -261,12 +261,12 @@ export async function installAppUpdate(
         'function Log($m) {',
         "  try { Add-Content -LiteralPath $logPath -Value \"$([DateTime]::Now.ToString('HH:mm:ss.fff')) $m\" } catch {}",
         '}',
-        'Log \"watcher started, installerPid=$installerPid exe=$exe\"',
+        'Log "watcher started, installerPid=$installerPid exe=$exe"',
         // 1) Wait for the installer to finish (up to 5 min — silent NSIS
         //    upgrades take 5–15s but slow disks / AV may stretch it).
         '$deadline = (Get-Date).AddMinutes(5)',
         'while ((Get-Date) -lt $deadline) {',
-        '  if (-not (Get-Process -Id $installerPid -ErrorAction SilentlyContinue)) { Log \"installer exited\"; break }',
+        '  if (-not (Get-Process -Id $installerPid -ErrorAction SilentlyContinue)) { Log "installer exited"; break }',
         '  Start-Sleep -Milliseconds 500',
         '}',
         // 2) Defender often holds the freshly-written GhosterNet.exe for a
@@ -277,21 +277,21 @@ export async function installAppUpdate(
         'while ((Get-Date) -lt $filePoll -and -not (Test-Path -LiteralPath $exe)) {',
         '  Start-Sleep -Milliseconds 500',
         '}',
-        'if (-not (Test-Path -LiteralPath $exe)) { Log \"exe missing at $exe — giving up\"; exit 1 }',
+        'if (-not (Test-Path -LiteralPath $exe)) { Log "exe missing at $exe — giving up"; exit 1 }',
         // 4) Try to launch via Start-Process first (preferred — surfaces
         //    in the user's interactive session). If that throws, fall
         //    back to the .NET Process API which goes through CreateProcess
         //    directly.
         'try {',
         '  Start-Process -FilePath $exe -WorkingDirectory $exeDir',
-        '  Log \"Start-Process OK\"',
+        '  Log "Start-Process OK"',
         '} catch {',
-        '  Log \"Start-Process failed: $_ — trying .NET fallback\"',
+        '  Log "Start-Process failed: $_ — trying .NET fallback"',
         '  try {',
         '    [System.Diagnostics.Process]::Start($exe) | Out-Null',
-        '    Log \"Process.Start OK\"',
+        '    Log "Process.Start OK"',
         '  } catch {',
-        '    Log \"all relaunch attempts failed: $_\"',
+        '    Log "all relaunch attempts failed: $_"',
         '  }',
         '}'
       ].join('\n')

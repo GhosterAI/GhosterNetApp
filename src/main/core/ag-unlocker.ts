@@ -292,11 +292,12 @@ async function runPowerShell(script: string, timeout = 20000): Promise<{ ok: boo
       { windowsHide: true, timeout }
     )
     return { ok: true, stdout: stdout || '', stderr: stderr || '' }
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err as { stdout?: string; stderr?: string; message?: string }
     return {
       ok: false,
-      stdout: err?.stdout || '',
-      stderr: err?.stderr || err?.message || String(err)
+      stdout: error?.stdout || '',
+      stderr: error?.stderr || error?.message || String(err)
     }
   }
 }
@@ -695,8 +696,9 @@ export async function patchAgInstall(
           errors.push(`${dir}: ${line.slice(4).trim()}`)
         }
       }
-    } catch (err: any) {
-      const out = String(err?.stdout || '')
+    } catch (err: unknown) {
+      const error = err as { stdout?: string; message?: string }
+      const out = String(error?.stdout || '')
       let foundErr = false
       for (const line of out.split(/\r?\n/)) {
         if (line.startsWith('ERR\t')) {
@@ -705,7 +707,7 @@ export async function patchAgInstall(
         }
       }
       if (!foundErr) {
-        errors.push(`${dir}: ${err?.message || String(err)}`)
+        errors.push(`${dir}: ${error?.message || String(err)}`)
       }
     }
   }
@@ -787,8 +789,9 @@ export async function unpatchAgInstall(
 
       patchedCache.set(dir, false)
       unpatched.push(`${installLabel(dir)} (${dir})`)
-    } catch (err: any) {
-      errors.push(`${dir}: ${err?.message || String(err)}`)
+    } catch (err: unknown) {
+      const error = err as { message?: string }
+      errors.push(`${dir}: ${error?.message || String(err)}`)
     }
   }
 

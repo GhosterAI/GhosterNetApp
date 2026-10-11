@@ -6,6 +6,7 @@ import { BrowserWindow } from 'electron'
 import { psiphonBinaryPath, psiphonRuntimeDir } from '../utils/dirs'
 import { getAppConfig, patchAppConfig } from '../config'
 import { setWindowsSystemProxy, disableWindowsSystemProxy } from '../sys/system-proxy'
+import { getVpnStatus } from './vpn'
 
 let child: ChildProcess | null = null
 let status: PsiphonStatus = {
@@ -163,9 +164,14 @@ export async function startPsiphon(): Promise<void> {
               setStatus({ state: 'running', startedAt: Date.now() })
               log('info', 'Psiphon туннель успешно установлен!')
               if (pCfg.systemProxy) {
-                void setWindowsSystemProxy('127.0.0.1', httpPort)
-                systemProxyApplied = true
-                log('info', `Системный прокси Windows активирован (127.0.0.1:${httpPort})`)
+                const vpnStatus = getVpnStatus()
+                if (vpnStatus.state === 'running' && vpnStatus.tunMode) {
+                  log('warn', 'VPN активен в режиме TUN — системный прокси не применен во избежание конфликта.')
+                } else {
+                  void setWindowsSystemProxy('127.0.0.1', httpPort)
+                  systemProxyApplied = true
+                  log('info', `Системный прокси Windows активирован (127.0.0.1:${httpPort})`)
+                }
               }
             }
             break
@@ -288,6 +294,10 @@ export async function togglePsiphonSystemProxy(enable: boolean): Promise<void> {
 
   if (status.state === 'running') {
     if (enable) {
+      const vpnStatus = getVpnStatus()
+      if (vpnStatus.state === 'running' && vpnStatus.tunMode) {
+        log('warn', 'Внимание: Включен системный прокси при активном TUN-адаптере VPN. Трафик браузеров будет направлен через Psiphon.')
+      }
       await setWindowsSystemProxy('127.0.0.1', status.httpPort || 20807)
       systemProxyApplied = true
       log('info', `Системный прокси Windows активирован (127.0.0.1:${status.httpPort || 20807})`)

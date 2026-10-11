@@ -64,7 +64,7 @@ export async function importFullConfig(
     throw new Error('Некорректный JSON файл резервной копии')
   }
 
-  if (!data || typeof data !== 'object' || (!data.config && !(data as any).appTheme)) {
+  if (!data || typeof data !== 'object' || (!data.config && !(data as unknown as Record<string, unknown>).appTheme)) {
     throw new Error('Файл не содержит корректных настроек GhosterNet')
   }
 

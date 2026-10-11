@@ -10,12 +10,14 @@ import { useTgwsStore } from '@renderer/store/tgws-store'
 import { useZapretStore } from '@renderer/store/zapret-store'
 import { useZapretTestStore } from '@renderer/store/zapret-test-store'
 import { usePsiphonStore } from '@renderer/store/psiphon-store'
+import { useVpnStore } from '@renderer/store/vpn-store'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import {
   tgwsStart, tgwsStop, tgwsRestart,
   zapretStart, zapretStop, zapretRestart,
   psiphonStart, psiphonStop, psiphonRestart,
   psiphonSetSystemProxy,
+  vpnStop, vpnRestart,
   zapretCheckUpdate, tgwsCheckUpdate,
   dnsAiCheckUpdate, agCheckUpdate,
   profilesSwitch,
@@ -25,7 +27,7 @@ import {
 } from '@renderer/utils/ipc'
 import { Button } from '@renderer/components/ui/button'
 import { POWER_ON_BANNER_STYLE, BUNDLED_TGWS_VERSION, BUNDLED_ZAPRET_VERSION } from '@renderer/lib/utils'
-import { RotateCw, Sparkles, X, Layers, Globe } from 'lucide-react'
+import { RotateCw, Sparkles, X, Layers, Globe, ShieldCheck } from 'lucide-react'
 import Power from '@renderer/assets/on_icon.svg'
 import Pause from '@renderer/assets/pause_icon.svg'
 
@@ -191,6 +193,7 @@ const Home: React.FC = () => {
   const tgws = useTgwsStore((s) => s.status)
   const zapret = useZapretStore((s) => s.status)
   const psiphon = usePsiphonStore((s) => s.status)
+  const vpn = useVpnStore((s) => s.status)
   // Block the Zapret toggle while the strategy tester is iterating —
   // a click here would race the lock held by zapret-tester.ts in main
   // and queue silently behind the test, which feels like a stuck button.
@@ -324,6 +327,7 @@ const Home: React.FC = () => {
       if (tgws.state === 'running' || tgws.state === 'error') tasks.push(tgwsRestart())
       if (zapret.state === 'running' || zapret.state === 'error') tasks.push(zapretRestart())
       if (psiphon.state === 'running' || psiphon.state === 'error') tasks.push(psiphonRestart())
+      if (vpn.state === 'running' || vpn.state === 'error') tasks.push(vpnRestart())
       if (tasks.length === 0) {
         toast.info('Нет запущенных процессов для перезагрузки', {
           style: {
@@ -368,7 +372,9 @@ const Home: React.FC = () => {
     zapret.state === 'running' ||
     zapret.state === 'error' ||
     psiphon.state === 'running' ||
-    psiphon.state === 'error'
+    psiphon.state === 'error' ||
+    vpn.state === 'running' ||
+    vpn.state === 'error'
 
   return (
     <BasePage>
@@ -472,6 +478,65 @@ const Home: React.FC = () => {
               <span className="font-mono text-[11px] text-muted-foreground">
                 HTTP: {psiphon.httpPort || 20807} | SOCKS5: {psiphon.socksPort || 20808}
               </span>
+            </div>
+          </div>
+        )}
+
+        {/* Universal VPN Quick Controls Pill */}
+        {vpn.state === 'running' && (
+          <div className="flex justify-center pb-2 px-4">
+            <div className="inline-flex flex-wrap items-center justify-center gap-2.5 rounded-full border border-border/40 bg-card/65 backdrop-blur-xl px-4 py-1.5 text-xs shadow-sm">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <ShieldCheck className="size-3.5 text-primary" />
+                <span className="font-medium text-foreground">
+                  VPN: {vpn.activeServer?.name || 'Активен'}
+                </span>
+              </span>
+              <span className="h-3 w-px bg-border/40" />
+              <span className="text-muted-foreground text-[11px]">
+                {vpn.tunMode ? 'Режим TUN' : 'Прокси'}:{' '}
+                <span className="font-semibold text-foreground uppercase">
+                  {vpn.activeServer?.type || 'sing-box'}
+                </span>{' '}
+                (
+                {vpn.routingMode === 'bypass-ru'
+                  ? 'Анти-блокировка РФ'
+                  : vpn.routingMode === 'global'
+                    ? 'Весь трафик'
+                    : 'Только заблокированное'}
+                )
+              </span>
+              {vpn.activeServer?.latencyMs != null && (
+                <>
+                  <span className="h-3 w-px bg-border/40" />
+                  <span className="font-mono text-[11px] text-emerald-400">
+                    {vpn.activeServer.latencyMs} ms
+                  </span>
+                </>
+              )}
+              <span className="h-3 w-px bg-border/40" />
+              <button
+                type="button"
+                onClick={() => {
+                  vpnStop()
+                    .then(() => toast.success('VPN отключен'))
+                    .catch((err) =>
+                      toast.error('Ошибка остановки VPN', {
+                        description: err instanceof Error ? err.message : String(err)
+                      })
+                    )
+                }}
+                className="text-destructive hover:text-destructive/80 font-medium cursor-pointer transition-colors"
+              >
+                Отключить
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/vpn')}
+                className="text-primary hover:underline font-medium cursor-pointer ml-1"
+              >
+                Настройки →
+              </button>
             </div>
           </div>
         )}

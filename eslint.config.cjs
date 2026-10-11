@@ -4,7 +4,18 @@ const { configs } = require('@electron-toolkit/eslint-config-ts')
 
 module.exports = [
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/out/**', '**/extra/**']
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/out/**',
+      '**/extra/**',
+      '**/Slipgate-main/**',
+      '**/Zapret-Zen-main/**',
+      '**/Dns-AI/**',
+      '**/antigravityUnlocker/**',
+      '**/tg-ws-proxy-main/**',
+      '**/zapret-discord-youtube-main/**'
+    ]
   },
 
   js.configs.recommended,
@@ -17,7 +28,8 @@ module.exports = [
     },
     rules: {
       ...react.configs.recommended.rules,
-      ...react.configs['jsx-runtime'].rules
+      ...react.configs['jsx-runtime'].rules,
+      'react/prop-types': 'off'
     },
     settings: {
       react: {
@@ -30,9 +42,10 @@ module.exports = [
   },
 
   {
-    files: ['**/*.cjs', '**/*.mjs', '**/tailwind.config.js', '**/postcss.config.js'],
+    files: ['**/*.cjs', '**/*.mjs', '**/tailwind.config.js', '**/postcss.config.js', 'scripts/**/*'],
     rules: {
-      '@typescript-eslint/no-require-imports': 'off'
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off'
     }
   },
 

@@ -138,7 +138,6 @@ const Zapret: React.FC = () => {
         .catch(() => void 0)
     }, 250)
     return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const showBanner =

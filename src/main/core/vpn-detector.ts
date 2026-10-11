@@ -10,7 +10,8 @@ export interface VpnPriorityContext {
 const DETECT_VPN_PS = `
 $vpnExes = @(
   'nekobox.exe','nekoray.exe','v2rayn.exe','xray.exe','xrayw.exe',
-  'sing-box.exe','singbox.exe','clash.exe','clash-verge.exe','verge-mihomo.exe','mihomo.exe',
+  'sing-box.exe','singbox.exe','wireproxy.exe','psiphon-tunnel-core.exe',
+  'clash.exe','clash-verge.exe','verge-mihomo.exe','mihomo.exe',
   'hiddify.exe','hiddifynext.exe','outline.exe','wireguard.exe','openvpn.exe',
   'amneziavpn.exe','amneziawg.exe','warp-svc.exe'
 )

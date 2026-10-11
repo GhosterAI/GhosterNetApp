@@ -383,13 +383,14 @@ async function httpProbe(url: string, timeoutMs = 3500): Promise<{ ok: boolean; 
       latencyMs: latency,
       statusText: `${res.status} ${res.statusText || 'OK'}`
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     clearTimeout(timer)
+    const err = e as { name?: string; message?: string }
     const latency = Date.now() - t0
     return {
       ok: false,
       latencyMs: latency,
-      statusText: e?.name === 'AbortError' ? 'Таймаут' : (e?.message || 'Ошибка')
+      statusText: err?.name === 'AbortError' ? 'Таймаут' : (err?.message || 'Ошибка')
     }
   }
 }

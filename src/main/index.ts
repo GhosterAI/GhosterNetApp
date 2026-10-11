@@ -11,8 +11,8 @@ import { createApplicationMenu } from './resolve/menu'
 import { initShortcut } from './resolve/shortcut'
 import { getTgwsStatus, restartTgws, startTgws, stopTgws } from './core/tgws'
 import { getZapretStatus, restartZapret, startZapret, stopZapret } from './core/zapret'
-import { stopPsiphon } from './core/psiphon'
-import { stopVpn } from './core/vpn'
+import { getPsiphonStatus, restartPsiphon, startPsiphon, stopPsiphon } from './core/psiphon'
+import { getVpnStatus, restartVpn, startVpn, stopVpn } from './core/vpn'
 import { appLog } from './utils/app-logger'
 import { enableAutoRun, disableAutoRun } from './sys/autoRun'
 import { isRunningAsAdmin } from './utils/elevation'
@@ -52,6 +52,8 @@ const initPromise = init()
 
 let wasTgwsRunningBeforeSleep = false
 let wasZapretRunningBeforeSleep = false
+let wasPsiphonRunningBeforeSleep = false
+let wasVpnRunningBeforeSleep = false
 
 app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.ghosternet.app')
@@ -99,6 +101,20 @@ app.whenReady().then(async () => {
       showError('Zapret start failed', `${e}`)
     })
   }
+  if (appConfig.psiphon?.autoStart) {
+    appLog('info', 'Автозапуск Psiphon — старт')
+    startPsiphon().catch((e) => {
+      appLog('error', `Автозапуск Psiphon упал: ${e}`)
+      showError('Psiphon start failed', `${e}`)
+    })
+  }
+  if (appConfig.vpn?.autoStart) {
+    appLog('info', 'Автозапуск VPN — старт')
+    startVpn().catch((e) => {
+      appLog('error', `Автозапуск VPN упал: ${e}`)
+      showError('VPN start failed', `${e}`)
+    })
+  }
 
   try {
     if (appConfig.autoLaunch) await enableAutoRun()
@@ -111,7 +127,12 @@ app.whenReady().then(async () => {
   powerMonitor.on('suspend', () => {
     wasTgwsRunningBeforeSleep = getTgwsStatus().state === 'running'
     wasZapretRunningBeforeSleep = getZapretStatus().state === 'running'
-    appLog('info', `Система уходит в сон (tgws=${wasTgwsRunningBeforeSleep}, zapret=${wasZapretRunningBeforeSleep})`)
+    wasPsiphonRunningBeforeSleep = getPsiphonStatus().state === 'running'
+    wasVpnRunningBeforeSleep = getVpnStatus().state === 'running'
+    appLog(
+      'info',
+      `Система уходит в сон (tgws=${wasTgwsRunningBeforeSleep}, zapret=${wasZapretRunningBeforeSleep}, psiphon=${wasPsiphonRunningBeforeSleep}, vpn=${wasVpnRunningBeforeSleep})`
+    )
   })
 
   powerMonitor.on('resume', async () => {
@@ -126,6 +147,14 @@ app.whenReady().then(async () => {
       if (wasZapretRunningBeforeSleep || getZapretStatus().state === 'running') {
         appLog('info', 'Перезапуск Zapret после сна…')
         restartZapret().catch((e) => appLog('warn', `Ошибка перезапуска Zapret после сна: ${e}`))
+      }
+      if (wasPsiphonRunningBeforeSleep || getPsiphonStatus().state === 'running') {
+        appLog('info', 'Перезапуск Psiphon после сна…')
+        restartPsiphon().catch((e) => appLog('warn', `Ошибка перезапуска Psiphon после сна: ${e}`))
+      }
+      if (wasVpnRunningBeforeSleep || getVpnStatus().state === 'running') {
+        appLog('info', 'Перезапуск VPN после сна…')
+        restartVpn().catch((e) => appLog('warn', `Ошибка перезапуска VPN после сна: ${e}`))
       }
     }, 2500)
   })
