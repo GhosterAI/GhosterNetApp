@@ -4,10 +4,10 @@
 
   <img src="https://raw.githubusercontent.com/GhosterAI/GhosterNet/main/assets/ghost-sculpture.svg" width="160" height="160" alt="GhosterNet Logo" />
 
-  # GhosterNet v2.7.0
+  # GhosterNet v3.0.0
   
-  **Единый швейцарский нож сетевой свободы для Windows 10 & 11 (x64)**  
-  *Обход DPI (Zapret), Telegram MTProto, зашифрованный DNS-AI, Universal VPN (sing-box + Wintun TUN), AmneziaWG (AWG), Psiphon VPN & Proxy, разблокировка Google Antigravity IDE и «Доктор сети» в один клик.*
+  **Единый сетевой инструмент для Windows 10 & 11 (x64)**  
+  *Обход DPI (Zapret + WinDivert), Telegram MTProto WS, Universal VPN (sing-box + Wintun TUN), AmneziaWG (AWG), Psiphon VPN, зашифрованный DNS-AI и разблокировка Google Antigravity IDE.*
 
   <p align="center">
     <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest"><img src="https://img.shields.io/github/v/release/GhosterAI/GhosterNetApp?style=for-the-badge&logo=windows&logoColor=white&color=7c3aed" alt="Latest Release"></a>
@@ -17,12 +17,12 @@
   </p>
 
   <p align="center">
-    <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest/download/GhosterNet_x64.exe"><strong>📥 Скачать установщик (.exe)</strong></a> •
-    <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest/download/GhosterNet_x64-portable.7z"><strong>📦 Скачать Portable (.7z)</strong></a> •
-    <a href="https://github.com/GhosterAI/GhosterNet"><strong>🌐 Официальный сайт</strong></a> •
-    <a href="#-быстрый-старт"><strong>🚀 Быстрый старт</strong></a> •
-    <a href="#-архитектура-и-модули"><strong>🏗️ Архитектура</strong></a> •
-    <a href="#-faq"><strong>❓ FAQ</strong></a>
+    <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest/download/GhosterNet_x64.exe"><strong>Скачать установщик (.exe)</strong></a> •
+    <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest/download/GhosterNet_x64-portable.7z"><strong>Скачать Portable (.7z)</strong></a> •
+    <a href="https://github.com/GhosterAI/GhosterNet"><strong>Официальный сайт</strong></a> •
+    <a href="#быстрый-старт"><strong>Быстрый старт</strong></a> •
+    <a href="#архитектура-и-модули"><strong>Архитектура</strong></a> •
+    <a href="#часто-задаваемые-вопросы-faq"><strong>FAQ</strong></a>
   </p>
 
 </div>
@@ -30,86 +30,90 @@
 ---
 
 > [!NOTE]
-> **GhosterNet** не является VPN-сервисом в привычном понимании. Он **не туннелирует весь трафик через удалённый сервер** и **не снижает скорость канала**. Приложение точечно модифицирует пакеты на уровне ядра сетевого стека Windows (WinDivert), поднимает локальные микро-мосты и шифрует DNS, сохраняя оригинальный IP, нулевую потерю скорости и минимальный пинг в онлайн-играх.
+> **GhosterNet** сочетает в себе технологии пакетной десинхронизации ядра сетевого стека Windows (WinDivert), локальные защищенные микро-мосты (Telegram WS, Psiphon, DNS-AI, Antigravity) и полноценный универсальный VPN-клиент на базе ядра sing-box и драйвера Wintun с интеллектуальной маршрутизацией.
 
 ---
 
-## 📑 Содержание
+## Содержание
 
-- [💡 Зачем нужен GhosterNet?](#-зачем-нужен-ghosternet)
-- [⚖️ Сравнение: GhosterNet vs VPN vs GoodbyeDPI](#-сравнение-ghosternet-vs-vpn-vs-goodbyedpi)
-- [🏗️ Архитектура и модули](#-архитектура-и-модули)
-  - [1. Zapret DPI Bypass (v1.10.3)](#1-zapret-dpi-bypass-v1103)
-  - [2. Telegram WS Proxy & DC Ping (v1.11.1)](#2-telegram-ws-proxy--dc-ping-v1111)
-  - [3. DNS-AI & DoH Resolver (v1.0.0)](#3-dns-ai--doh-resolver-v100)
-  - [4. Antigravity Unlocker (v2.21.1)](#4-antigravity-unlocker-v2211)
-  - [5. 🩺 «Доктор сети» (Auto-Fix в 1 клик)](#5--доктор-сети-auto-fix-в-1-клик)
-  - [6. 🎛️ «Умный Трей» (Smart Tray)](#6-️-умный-трей-smart-tray)
-  - [7. 💾 Экспорт и импорт профилей (.ghosternet)](#7--экспорт-и-импорт-профилей-ghosternet)
-- [📊 Глобальная схема маршрутизации](#-глобальная-схема-маршрутизации)
-- [🎯 Каталог пресетов и управление списками](#-каталог-пресетов-и-управление-списками)
-- [🔄 Автоматическое обновление всех ядер](#-автоматическое-обновление-всех-ядер)
-- [🚀 Быстрый старт](#-быстрый-старт)
-- [🛠️ Сборка из исходного кода](#-сборка-из-исходного-кода)
-- [❓ Часто задаваемые вопросы (FAQ)](#-часто-задаваемые-вопросы-faq)
-- [❤️ Благодарности и сторонние проекты](#-благодарности-и-сторонние-проекты)
-- [📄 Лицензия](#-лицензия)
+- [О проекте](#о-проекте)
+- [Сравнение подходов](#сравнение-подходов)
+- [Архитектура и модули](#архитектура-и-модули)
+  - [1. Zapret DPI Bypass](#1-zapret-dpi-bypass)
+  - [2. Telegram WS Proxy и мониторинг DC](#2-telegram-ws-proxy-и-мониторинг-dc)
+  - [3. Universal VPN и AmneziaWG (sing-box + Wintun)](#3-universal-vpn-и-amneziawg-sing-box--wintun)
+  - [4. Psiphon VPN & Proxy](#4-psiphon-vpn--proxy)
+  - [5. DNS-AI и DoH Resolver](#5-dns-ai-и-doh-resolver)
+  - [6. Antigravity Unlocker](#6-antigravity-unlocker)
+  - [7. Сетевой доктор и диагностика](#7-сетевой-доктор-и-диагностика)
+  - [8. Системный трей и профили](#8-системный-трей-и-профили)
+- [Схема маршрутизации трафика](#схема-маршрутизации-трафика)
+  - [Каталог пресетов и списков обхода](#каталог-пресетов-и-списков-обхода)
+- [Быстрый старт](#быстрый-старт)
+- [Сборка из исходного кода](#сборка-из-исходного-кода)
+- [Часто задаваемые вопросы (FAQ)](#часто-задаваемые-вопросы-faq)
+- [Благодарности и открытые компоненты](#благодарности-и-открытые-компоненты)
+- [Лицензия](#лицензия)
 
 ---
 
-## 💡 Зачем нужен GhosterNet?
+## О проекте
 
-В современных реалиях сетевые ограничения в России и СНГ строятся на сложных многоуровневых механизмах ТСПУ/DPI, блокировках протокола MTProto в Telegram, фильтрации голосовых пакетов Discord (UDP/Voice) и геоблокировках популярных ИИ-сервисов (Google Gemini, ChatGPT, Claude, Copilot) и инструментов разработки (Google Antigravity IDE).
+Современные сетевые ограничения строятся на комплексе разнородных блокировок: ТСПУ/DPI провайдеров, блокировка MTProto в Telegram, фильтрация голосовых UDP-сессий Discord и региональные ограничения зарубежных ИИ-платформ (Google Gemini, OpenAI ChatGPT, Claude) и инструментов разработки (Google Antigravity IDE).
 
-Обычные VPN-сервисы создают массу неудобств:
-- ❌ **Урезают скорость канала** в 3–10 раз;
-- ❌ **Увеличивают пинг** в онлайн-играх на 50–150 мс;
-- ❌ **Ломают российские сайты** (Госуслуги, банки, маркетплейсы);
-- ❌ Постоянно блокируются протоколы (WireGuard, OpenVPN, Shadowsocks).
+Использование стандартного стороннего VPN для всех задач часто неэффективно:
+- Снижение скорости соединения в несколько раз;
+- Рост сетевой задержки (пинга) в онлайн-играх;
+- Недоступность локальных сервисов (банки, Госуслуги, маркетплейсы);
+- Периодическая блокировка стандартных протоколов туннелирования.
 
-**GhosterNet решает эту проблему комплексно и элегантно:**
+GhosterNet распределяет задачи по специализированным модулям:
 
 ```mermaid
 flowchart LR
-    A["Ваш ПК — Windows 10/11"] --> B{"Классификатор GhosterNet"}
-    B -->|"DPI сайты — YouTube, Discord"| C["Zapret + WinDivert — Десинхронизация"]
-    B -->|"Telegram — Медиа, Звонки"| D["TgWsProxy — WebSocket через Cloudflare"]
-    B -->|"ИИ сервисы — Gemini, ChatGPT"| E["DNS-AI — DoH Comss, Xbox, Malw"]
-    B -->|"Google Antigravity IDE"| F["AG Unlocker — Loopback 127.0.10.x"]
-    B -->|"Обычный трафик — Банки, Игры"| G["Прямое соединение — 100% скорость"]
+    A["Компьютер Windows 10/11"] --> B{"GhosterNet Core"}
+    B -->|"DPI: YouTube, Discord"| C["Zapret + WinDivert (Десинхронизация)"]
+    B -->|"Telegram: медиа и звонки"| D["TgWsProxy (WebSocket Edge)"]
+    B -->|"Туннель: VLESS, AWG, Hysteria"| E["Universal VPN (sing-box + Wintun)"]
+    B -->|"Резервный обход цензуры"| F["Psiphon VPN & Proxy"]
+    B -->|"ИИ: ChatGPT, Claude, Gemini"| G["DNS-AI (Зашифрованный DoH/DoT)"]
+    B -->|"Google Antigravity IDE"| H["AG Unlocker (Loopback 127.0.10.x)"]
+    B -->|"Локальные ресурсы и игры"| I["Прямое соединение (Direct)"]
 
-    C --> H["Провайдер / Интернет"]
-    D --> H
-    E --> H
-    F --> H
-    G --> H
+    C --> OUT["Интернет / Провайдер"]
+    D --> OUT
+    E --> OUT
+    F --> OUT
+    G --> OUT
+    H --> OUT
+    I --> OUT
 ```
 
 ---
 
-## ⚖️ Сравнение: GhosterNet vs VPN vs GoodbyeDPI
+## Сравнение подходов
 
-| Параметр / Функция | Обычный VPN | GoodbyeDPI | Zapret (чистый консольный) | **GhosterNet v2.2.0** |
+| Характеристика | Обычный VPN | GoodbyeDPI | Zapret (консольный) | GhosterNet v3.0.0 |
 | :--- | :---: | :---: | :---: | :---: |
-| **Скорость скачивания** | Режется сервером | 100% канала | 100% канала | **100% канала** |
-| **Пинг в онлайн-играх** | +50...150 мс | Без изменений | Без изменений | **0 мс задержки (Игровой фильтр)** |
-| **YouTube 4K 60FPS & QUIC** | Зависит от сервера | Часто буферизует | Настраивается вручную | **Мгновенно (Блокировка QUIC + ALT-стратегии)** |
-| **Discord (Голос + Стримы)** | Работает | Не чинит Voice UDP | Требует сложных BAT | **Работает из коробки (TCP + UDP фильтр)** |
-| **Telegram (Медиа и Звонки)** | Блокируется РКН | Не умеет | Не умеет | **TgWsProxy v1.11.1 + Спидтест DC1–DC5** |
-| **Google Antigravity IDE** | Требует смены региона | Не умеет | Не умеет | **Разблокировка без VPN (AG v2.21.1)** |
-| **ChatGPT, Gemini, Claude** | Блокирует аккаунты | Не умеет | Не умеет | **DNS-AI DoH (Comss / Xbox / Malw.link)** |
-| **Автоподбор стратегий** | Нет | Нет | Консольный blockcheck | **Встроенный автотест в 1 клик с рейтингом** |
-| **Автопочинка сети («Доктор сети»)** | Нет | Нет | Нет | **Auto-Fix в 1 клик (BFE, DNS, WinDivert, Discord)** |
-| **Графический интерфейс** | Да | Нет (CMD) | Нет (BAT файлы) | **Красивый современный UI (Тёмная/Светлая тема)** |
-| **Smart Tray & HUD** | Простой | Нет | Нет | **Управление всеми ядрами в 1 клик + Live HUD** |
+| **Скорость загрузки** | Ограничена сервером | 100% канала | 100% канала | **100% канала** |
+| **Задержка в играх** | +50...150 мс | Без изменений | Без изменений | **0 мс задержки (игровой фильтр)** |
+| **YouTube 4K 60FPS** | Зависит от сервера | Возможна буферизация | Ручная настройка BAT | **Штатная поддержка (QUIC + ALT-профили)** |
+| **Discord (Голос + Видео)** | Работает | Не обрабатывает UDP | Требует сложных BAT | **Встроенный фильтр TCP + UDP** |
+| **Telegram (Медиа и звонки)** | Блокируется | Не поддерживается | Не поддерживается | **TgWsProxy + мониторинг DC1–DC5** |
+| **Universal VPN & AWG** | Отдельное приложение | Не поддерживается | Не поддерживается | **Встроенный sing-box v1.14 + Wintun** |
+| **Отказоустойчивый Psiphon**| Отдельное приложение | Не поддерживается | Не поддерживается | **Встроенный Psiphon с системным прокси** |
+| **Google Antigravity IDE** | Требует смены региона | Не поддерживается | Не поддерживается | **Разблокировка без смены региона** |
+| **ИИ-сервисы (Gemini, ChatGPT)**| Блокировка аккаунтов | Не поддерживается | Не поддерживается | **Шифрованный DoH (DNS-AI)** |
+| **Графический интерфейс** | Да | Консоль | BAT-скрипты | **Современный минималистичный UI** |
+| **Автоматическая диагностика**| Нет | Нет | Нет | **Доктор сети (исправление в 1 клик)** |
 
 ---
 
-## 🏗️ Архитектура и модули
+## Архитектура и модули
 
-### 1. Zapret DPI Bypass (`v1.10.3`)
+### 1. Zapret DPI Bypass
 
-Сердце пакетного обхода блокировок. Работает в тандеме с низкоуровневым драйвером **WinDivert64.sys**, перехватывая только исходящие рукопожатия TLS (Client Hello), HTTP GET и специфические UDP-пакеты.
+Модуль обхода глубокого анализа пакетов. Работает на базе драйвера ядра **WinDivert64.sys**, перехватывая исходящие рукопожатия TLS (ClientHello), HTTP-запросы и определенные UDP-пакеты.
 
 ```mermaid
 sequenceDiagram
@@ -118,247 +122,206 @@ sequenceDiagram
     participant WD as Драйвер WinDivert64
     participant Zapret as Движок winws.exe
     participant ISP as ТСПУ / DPI Провайдера
-    participant Server as Целевой веб-сервер
+    participant Server as Веб-сервер
 
-    App->>WD: Отправка TLS ClientHello (Порт 443)
+    App->>WD: Отправка TLS ClientHello (443)
     WD->>Zapret: Перехват пакета по списку доменов
     Note over Zapret: Десинхронизация: split2, fake TLS, disorder, oob
-    Zapret->>ISP: Отправка фейкового/разбитого пакета
-    Note over ISP: DPI не может распознать SNI и пропускает сессию
-    Zapret->>Server: Доставка оригинального пакета
-    Server-->>App: Прямое защищённое соединение установлено!
+    Zapret->>ISP: Отправка фрагментированного пакета
+    Note over ISP: DPI не может определить SNI и пропускает сессию
+    Zapret->>Server: Доставка оригинального запроса
+    Server-->>App: Прямое защищенное соединение установлено
 ```
 
-- **20+ встроенных стратегий**:
-  - `general (ALT 1–12.2)` — от классических методов разбивки пакетов до современных обходов ТСПУ 2026 года;
-  - `GhosterNet Hub` — эксклюзивные оптимизированные стратегии для провайдеров РФ;
-  - `EA`, `Minecraft`, `Roblox` — выделенные игровые профили.
-- **Матричный бенчмарк (`IPset × Game Filter`)**: автоматический тест режимов `Loaded`, `None`, `Any` и портов `1024–65535` для поиска идеального баланса скорости и стабильности.
-- **Игровой фильтр портов**: порты онлайн-игр исключаются из обработки WinDivert, устраняя микрофризы и потери пакетов.
-- **VPN Coexistence**: интеллектуальное обнаружение виртуальных адаптеров WireGuard, OpenVPN, Cloudflare WARP, TUN/TAP — их адреса и порты исключаются из перехвата, предотвращая любые конфликты.
+- **Более 20 готовых стратегий**: пресеты `general (ALT 1–12.2)`, оптимизированные профили `GhosterNet Hub`, специализированные профили для игровых лаунчеров (EA, Minecraft, Roblox).
+- **Матричный бенчмарк**: проверка комбинаций `IPset` и `Game Filter` с замером времени отклика.
+- **Игровой фильтр портов**: исключение игрового трафика из обработки драйвером для предотвращения задержек.
+- **Совместимость с VPN (Coexistence)**: автоматическое определение адаптеров WireGuard, OpenVPN, WARP и исключение их адресов из фильтрации.
 
 ---
 
-### 2. Telegram WS Proxy & DC Ping (`v1.11.1`)
+### 2. Telegram WS Proxy и мониторинг DC
 
-Официальный клиент Telegram в условиях блокировок MTProto испытывает проблемы с долгой загрузкой видео, голосовых сообщений и разрывами звонков. Встроенный **TgWsProxy** поднимает локальный сервер на `127.0.0.1:1443` и туннелирует трафик мессенджера через защищённое WebSocket-соединение с инфраструктурой Cloudflare.
+В условиях блокировок стандартного протокола MTProto модуль поднимает локальный мост на `127.0.0.1:1443` и передает трафик мессенджера через WebSocket-соединение с защитой Fake-TLS.
 
-```mermaid
-flowchart LR
-    TG["Telegram Desktop"] -->|"MTProto 127.0.0.1:1443"| PROXY["TgWsProxy v1.11.1"]
-    PROXY -->|"WebSocket + Fake-TLS"| CF["Cloudflare Edge Network"]
-    CF -->|"Прямой туннель"| DC1["DC1 — Майами"]
-    CF -->|"Прямой туннель"| DC2["DC2 — Амстердам"]
-    CF -->|"Прямой туннель"| DC4["DC4 — Амстердам"]
-    CF -->|"Прямой туннель"| DC5["DC5 — Сингапур"]
-
-    style TG fill:#0ea5e9,stroke:#0284c7,color:#fff
-    style PROXY fill:#7c3aed,stroke:#6d28d9,color:#fff
-    style CF fill:#f97316,stroke:#ea580c,color:#fff
-```
-
-- **🌐 Интерактивный спидтест датацентров (DC Ping)**:
-  Вкладка Telegram отображает живой пинг в миллисекундах до каждого датацентра Telegram (`DC1`–`DC5`) и автоматически подсвечивает датацентр с наименьшей задержкой для медиафайлов.
-- **Алгоритмы автоподбора (`Fast Tune` / `Full Tune`)**:
-  Тестируют задержку WebSocket-рукопожатий и определяют наилучший мост с автоматическим применением настроек.
-- **Автоподключение в 1 клик**:
-  Кнопка `tg://proxy?server=127.0.0.1&port=1443&secret=...` моментально активирует прокси в Telegram Desktop.
+- **Спидтест датацентров (DC Ping)**: отображение времени отклика в реальном времени до каждого датацентра Telegram (`DC1`–`DC5`) для выбора оптимального маршрута медиа.
+- **Алгоритмы Fast Tune и Full Tune**: автоматический перебор и выбор наилучшей конфигурации соединения.
+- **Быстрое подключение**: переход по ссылке `tg://proxy?server=127.0.0.1&port=1443&secret=...` для моментальной активации в Telegram Desktop.
 
 ---
 
-### 3. DNS-AI & DoH Resolver (`v1.0.0`)
+### 3. Universal VPN и AmneziaWG (sing-box + Wintun)
 
-Инструмент обхода геоблокировок ИИ-сервисов (ChatGPT, Claude, Google Gemini, GitHub Copilot) без необходимости использования медленного VPN.
+Полнофункциональный VPN-клиент, встроенный непосредственно в интерфейс GhosterNet.
 
-```mermaid
-flowchart TD
-    Browser["Браузер / Приложение — gemini.google.com"] --> Resolver{"DNS-AI Резолвер"}
-    Resolver -->|"Режим 1: Stub Proxy"| Stub["Служба DnsAiClient — 127.0.0.1:53"]
-    Resolver -->|"Режим 2: Нативный DoH"| Native["Windows 11 DoH Engine"]
-    
-    Stub --> Upstreams{"Выбранный апстрим"}
-    Native --> Upstreams
-    
-    Upstreams -->|"AI Unblock"| Comss["Comss DoH"]
-    Upstreams -->|"Xbox Smart DNS"| Xbox["Xbox DNS"]
-    Upstreams -->|"Anti-Censorship"| Malw["Malw.link"]
-    Upstreams -->|"Стандартный"| CFDNS["Cloudflare 1.1.1.1"]
-```
+- **Ядро sing-box v1.14 + драйвер Wintun**: поддержка современных протоколов туннелирования:
+  - **VLESS** (с технологией Reality);
+  - **AmneziaWG (AWG)** — модифицированный WireGuard с защитой от блокировок;
+  - **Hysteria 2** (протокол на базе UDP/QUIC);
+  - **Trojan** и **Shadowsocks**.
+- **Три режима маршрутизации**:
+  - **Умный обход (РФ напрямую)**: российские домены и сервисы открываются через локального провайдера без потери скорости, а заблокированные ресурсы направляются через VPN. Режим работает на базе встроенных локальных бинарных правил `geosite-ru.srs` и `geoip-ru.srs` без необходимости их фоновой загрузки из сети;
+  - **Полный туннель (Global)**: весь сетевой трафик системы направляется в защищенный туннель;
+  - **Только локальный прокси**: туннелирование без создания виртуального сетевого адаптера с предоставлением локальных портов (HTTP: 2080, SOCKS5: 2081).
+- **Минималистичный интерфейс**:
+  - Импорт подписок и конфигураций по ссылке, из буфера обмена в 1 клик или через файл `.conf` (WireGuard / AmneziaWG);
+  - Векторные SVG-флаги стран (`country-flag-icons`) с автоопределением по кодам ISO, русским и английским названиям;
+  - Компактный замер пинга всех серверов одной кнопкой;
+  - Быстрое переключение серверов на лету.
+
+---
+
+### 4. Psiphon VPN & Proxy
+
+Встроенный клиент распределенной сети Psiphon для автоматического обхода жесткой цензуры.
+
+- **Автоматический поиск рабочих узлов**: динамическое подключение к независимым серверам сети без необходимости ручного добавления ключей или файлов конфигурации.
+- **Поддержка системного прокси**: возможность автоматического включения системного прокси Windows в один клик либо работа в режиме локальных портов (HTTP: 20807, SOCKS5: 20808).
+- **Выбор региона выхода**: подключение к автоматическому узлу или конкретной стране из списка доступных регионов.
+
+---
+
+### 5. DNS-AI и DoH Resolver
+
+Решение для обхода региональных ограничений веб-интерфейсов и API ИИ-платформ (Google Gemini, OpenAI ChatGPT, Anthropic Claude, GitHub Copilot) без замедления остального трафика.
 
 - **Два режима работы**:
-  1. **Локальный Stub-прокси (`127.0.0.1:53`)**: системная служба перехватывает DNS-запросы на петлевом интерфейсе, шифрует их по протоколам DoH/DoT и резолвит заблокированные адреса.
-  2. **Нативный DoH Windows 11**: автоматическая регистрация защищённого HTTPS-резолвера прямо в сетевом стеке Windows через PowerShell API (`Set-DnsClientDoHServerAddress`).
-- **Специализированные апстримы**: Comss.one, Xbox Smart DNS, Malw.link, Cloudflare, Quad9.
-- **Живой пинг эндпоинтов**: отображение времени отклика DoH-серверов в реальном времени.
-- **Аварийный сброс (Rescue Network)**: мгновенный возврат всех сетевых адаптеров к стандартному автоматическому DHCP при любых сбоях.
+  - **Локальный Stub-прокси (`127.0.0.1:53`)**: служба перехватывает DNS-запросы на петлевом интерфейсе и передает их через шифрованные протоколы DoH/DoT;
+  - **Нативный DoH Windows 11**: регистрация резолвера непосредственно в сетевом стеке операционной системы через системный API.
+- **Специализированные серверы**: Comss.one, Xbox Smart DNS, Malw.link, Cloudflare, Quad9 с отображением пинга каждого узла.
+- **Аварийный сброс**: возврат всех сетевых интерфейсов к стандартным настройкам DHCP в случае сбоев.
 
 ---
 
-### 4. Antigravity Unlocker (`v2.21.1`)
+### 6. Antigravity Unlocker
 
-Специализированный модуль для разработчиков, позволяющий работать в новейшей **Google Antigravity IDE** прямо из России без использования VPN и без смены региона аккаунта Google.
+Специализированный модуль для разработчиков, снимающий региональные ограничения среды **Google Antigravity IDE** в России без необходимости включения общего VPN и смены региона учетной записи Google.
 
-- **Loopback IP Binding**: назначение виртуальных адресов `127.0.10.2–6` на loopback-адаптер.
-- **Фоновый демон и Watchdog**: непрерывный мониторинг состояния локального прокси на порту `24816` и DNS-форвардера.
-- **Автоматический патчинг IDE**: безопасная модификация `product.json`, `workbench`, `language_server` и файлов `asar` с возможностью отката в один клик.
-- **Режим «Быстрый запуск» (Auto-Run)**: поднять службы, пропатчить IDE и запустить редактор нажатием одной кнопки.
+- **Loopback IP Binding**: назначение виртуальных адресов `127.0.10.2–6` на петлевой адаптер.
+- **Watchdog-демон**: поддержание работы локального прокси-сервера (порт `24816`) и форвардера запросов.
+- **Патчинг IDE**: автоматическая модификация компонентов редактора с возможностью мгновенного отката к исходному состоянию.
+- **Быстрый запуск**: применение настроек и запуск среды разработки одним действием.
 
 ---
 
-### 5. 🩺 «Доктор сети» (Auto-Fix в 1 клик)
+### 7. Сетевой доктор и диагностика
 
-Комплексный инструмент восстановления работоспособности операционной системы при любых сетевых неполадках, зависаниях сокетов или конфликтах со сторонними программами.
+Встроенный диагностический комплекс для анализа сетевого окружения и устранения неисправностей:
+
+- **Автоматическое исправление в 1 клик**:
+  - Сброс системного кэша DNS (`ipconfig /flushdns`);
+  - Очистка кэша Discord (GPU Cache и Code Cache);
+  - Перезапуск службы базовой фильтрации Windows (BFE);
+  - Снятие зависших блокировок драйвера WinDivert и очистка сетевых сокетов;
+  - Перезапуск локальных служб GhosterNet.
+- **Мониторинг доступности**: оперативная проверка доступности YouTube, Discord, Telegram и ИИ-платформ.
+
+---
+
+### 8. Системный трей и профили
+
+- **Компактный режим**: сворачивание в системный трей Windows с управлением всеми модулями из контекстного меню.
+- **Экспорт и импорт профилей (`.ghosternet`)**: перенос пользовательских настроек, списков доменов, выбранных стратегий и конфигураций на другие устройства.
+
+---
+
+## Схема маршрутизации трафика
 
 ```mermaid
 flowchart TD
-    Click["Кнопка «Починить сеть в 1 клик»"] --> Step1["1. Сброс DNS-кэша Windows — ipconfig /flushdns"]
-    Step1 --> Step2["2. Очистка кэша Discord — GPU и CodeCache"]
-    Step2 --> Step3["3. Перезапуск службы Base Filtering Engine BFE"]
-    Step3 --> Step4["4. Снятие блокировок WinDivert и очистка сокетов"]
-    Step4 --> Step5["5. Перезапуск служб DnsAiClient и Antigravity"]
-    Step5 --> Step6["6. Оптимизация сетевого стека — TCP Timestamps"]
-    Step6 --> Done["Сеть полностью восстановлена!"]
-```
-
-#### Live Security HUD & Мониторинг доступности
-Интерактивный виджет в шапке приложения в реальном времени измеряет пинг и статус ключевых сервисов:
-- 🔴/🟢 **YouTube 4K** (QUIC UDP 443 & HTTPS TLS)
-- 🔴/🟢 **Discord** (Voice Gateway UDP & API HTTPS)
-- 🔴/🟢 **Telegram** (Датацентры DC1–DC5)
-- 🔴/🟢 **ИИ сервисы** (Google Gemini, OpenAI ChatGPT, Anthropic Claude)
-
----
-
-### 6. 🎛️ «Умный Трей» (Smart Tray)
-
-GhosterNet сворачивается в компактную иконку системного трея Windows, предоставляя быстрый доступ ко всем основным функциям:
-- Включение / выключение **Zapret DPI** в 1 клик;
-- Запуск / остановка **Telegram WS Proxy**;
-- Быстрое переключение **DNS-AI (DoH)**;
-- Управление **Antigravity Unlocker**;
-- Запуск **«Доктора сети»** прямо из трея;
-- Моментальная проверка обновлений всех компонентов;
-- Информативный тултип при наведении: показывает активные стратегии и статус модулей.
-
----
-
-### 7. 💾 Экспорт и импорт профилей (`.ghosternet`)
-
-Больше не нужно заново настраивать приложение после переустановки Windows или при покупке нового ноутбука:
-- **Экспорт профиля**: сохранение всех пользовательских списков, выбранных стратегий, исключений, мостов Telegram и настроек DNS в единый файл `.ghosternet` (или `.json`).
-- **Импорт профиля**: моментальное восстановление вашей идеальной конфигурации на любом компьютере в один клик.
-
----
-
-## 📊 Глобальная схема маршрутизации
-
-```mermaid
-flowchart TD
-    subgraph ClientPC ["Ваш компьютер — Windows 10 / 11 x64"]
+    subgraph ClientPC ["Клиент Windows 10 / 11 x64"]
         direction TB
-        AppBrowser["Браузеры — Chrome, Edge, Firefox"]
-        AppDiscord["Discord — Чат, Звонки, Стримы"]
+        AppBrowser["Браузеры: Chrome, Edge, Firefox"]
+        AppDiscord["Discord: чат, звонки, стримы"]
         AppTG["Telegram Desktop"]
+        AppVPN["VPN-трафик: sing-box / Psiphon"]
         AppIDE["Google Antigravity IDE"]
-        AppGames["Игры — Steam, Riot, Epic Games"]
+        AppGames["Игровые лаунчеры и игры"]
     end
 
-    subgraph GhosterCore ["Ядра GhosterNet v2.2.0"]
+    subgraph GhosterCore ["GhosterNet Core"]
         direction TB
-        EngineDPI["Zapret — winws.exe + WinDivert64"]
-        EngineTG["TgWsProxy — 127.0.0.1:1443"]
-        EngineDNS["DNS-AI — 127.0.0.1:53 / DoH"]
-        EngineAG["AG Unlocker — 127.0.0.1:24816"]
-        EngineDoctor["«Доктор сети» — Auto-Fix Engine"]
+        EngineDPI["Zapret (winws.exe + WinDivert64)"]
+        EngineTG["TgWsProxy (127.0.10.1:1443)"]
+        EngineVPN["Universal VPN & Psiphon Core"]
+        EngineDNS["DNS-AI (127.0.0.1:53 / DoH)"]
+        EngineAG["AG Unlocker (127.0.10.x:24816)"]
+        EngineDoctor["Сетевой доктор (Auto-Fix)"]
     end
 
-    subgraph Internet ["Сеть Интернет / Внешние сервисы"]
+    subgraph Internet ["Внешние ресурсы"]
         direction TB
-        SrvWeb["Сайты и YouTube — Прямое подключение"]
-        SrvCF["Cloudflare Edge — Telegram DC1–DC5"]
-        SrvAI["ChatGPT, Claude, Gemini — Через DoH"]
-        SrvGoogle["Google Cloud AI Services"]
-        SrvGameServers["Игровые сервера — Минимальный пинг"]
+        SrvWeb["Веб-сайты и YouTube (Direct)"]
+        SrvCF["Cloudflare Edge (Telegram DC1–DC5)"]
+        SrvVPNEnd["Удаленные VPN-серверы"]
+        SrvAI["ChatGPT, Claude, Gemini"]
+        SrvGoogle["Инфраструктура Google Cloud"]
+        SrvGameServers["Игровые серверы (минимальный пинг)"]
     end
 
-    AppBrowser -->|"Порт 443 TCP и UDP"| EngineDPI
+    AppBrowser -->|"Порт 443 TCP/UDP"| EngineDPI
     AppDiscord -->|"Голос UDP + API"| EngineDPI
     AppBrowser -->|"DNS запросы"| EngineDNS
     AppTG -->|"MTProto WS"| EngineTG
-    AppIDE -->|"Loopback 127.0.10.x"| EngineAG
-    AppGames -->|"Прямой трафик — Игровой фильтр"| SrvGameServers
+    AppVPN -->|"Туннель Wintun"| EngineVPN
+    AppIDE -->|"Loopback"| EngineAG
+    AppGames -->|"Прямой трафик"| SrvGameServers
 
-    EngineDPI -->|"Десинхронизированные пакеты"| SrvWeb
+    EngineDPI -->|"Десинхронизация"| SrvWeb
     EngineTG -->|"WebSocket Fake-TLS"| SrvCF
-    EngineDNS -->|"Зашифрованные DNS запросы"| SrvAI
-    EngineAG -->|"Прокси туннель"| SrvGoogle
+    EngineVPN -->|"Зашифрованный трафик"| SrvVPNEnd
+    EngineDNS -->|"Зашифрованный DoH"| SrvAI
+    EngineAG -->|"Локальный форвардер"| SrvGoogle
 
-    EngineDoctor -.->|"Контроль и лечение стека"| ClientPC
+    EngineDoctor -.->|"Мониторинг стека"| ClientPC
 ```
 
 ---
 
-## 🎯 Каталог пресетов и управление списками
+### Каталог пресетов и списков обхода
 
-В GhosterNet интегрирован удобный менеджер доменов и списков:
-
-- **24 готовых пресета сервисов в 3 категориях**:
-  - 🎮 **Игры и лаунчеры**: Steam, Epic Games, Battle.net, Riot Games, EA App, Ubisoft Connect, Roblox, Minecraft.
-  - 📱 **Соцсети и медиа**: YouTube, Discord, Twitch, Spotify, Twitter/X, Instagram, Facebook, TikTok.
-  - 🤖 **Работа и ИИ**: OpenAI / ChatGPT, Anthropic / Claude, Google Gemini, Google Antigravity, GitHub, Notion, Canva, Figma.
-- **4 пользовательских списка**:
-  - `list-general-user.txt` — ваши личные домены для обхода DPI;
-  - `list-exclude-user.txt` — домены-исключения, которые должны идти строго напрямую;
-  - `ipset-all-user.txt` — пользовательские IP-подсети;
-  - `ipset-exclude-user.txt` — исключения IP-адресов.
-- **Редактор файла `hosts`**: безопасное добавление и удаление записей в системном файле `hosts` с автоматическим сохранением бэкапа.
+- **24 готовых пресета сервисов**:
+  - Игры и лаунчеры: Steam, Epic Games, Battle.net, Riot Games, EA App, Ubisoft Connect, Roblox, Minecraft;
+  - Медиа и социальные сети: YouTube, Discord, Twitch, Spotify, Twitter/X, Instagram, Facebook, TikTok;
+  - Разработка и ИИ: OpenAI / ChatGPT, Anthropic / Claude, Google Gemini, Google Antigravity, GitHub, Notion, Canva, Figma.
+- **Пользовательские списки**:
+  - `list-general-user.txt` — персональные домены для десинхронизации;
+  - `list-exclude-user.txt` — исключения из перехвата;
+  - `ipset-all-user.txt` и `ipset-exclude-user.txt` — диапазоны IP-адресов.
+- **Редактор hosts**: встроенный инструмент редактирования системного файла `hosts` с автоматическим резервным копированием.
 
 ---
 
-## 🔄 Автоматическое обновление всех ядер
+## Быстрый старт
 
-GhosterNet следит за актуальностью всех сетевых инструментов без участия пользователя:
+### 1. Скачивание
 
-| Компонент | Репозиторий апстрима | Назначение |
-| :--- | :--- | :--- |
-| **GhosterNet App** | [GhosterAI/GhosterNetApp](https://github.com/GhosterAI/GhosterNetApp) | Главная оболочка клиента и службы |
-| **Zapret** | [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube) | Бинарники `winws.exe`, стратегии и списки |
-| **TgWsProxy** | [Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy) | Ядро WebSocket-прокси для Telegram |
-| **DNS-AI** | [confeden/DNS-AI](https://github.com/confeden/DNS-AI) | Локальный DoH/DoT резолвер для ИИ |
-| **Antigravity Unlocker** | [confeden/Antigravity](https://github.com/confeden/Antigravity) | Демон и патчер для Google Antigravity IDE |
-
----
-
-## 🚀 Быстрый старт
-
-### 1. Скачивание и установка
-
-1. Перейдите на страницу [Релизов GhosterNet](https://github.com/GhosterAI/GhosterNetApp/releases/latest).
-2. Выберите подходящий вариант:
-   - **`GhosterNet_x64.exe`** — полноценный установщик (рекомендуется): создаст ярлыки в меню «Пуск», настроит автозапуск и зарегистрирует протоколы `ghosternet://` и `tg-ws://`.
-   - **`GhosterNet_x64-portable.7z`** — портативная версия: распакуйте в любую удобную папку (например, `C:\GhosterNet`) и запускайте без установки.
+Перейдите в раздел [Релизов GhosterNet](https://github.com/GhosterAI/GhosterNetApp/releases/latest) и загрузите дистрибутив:
+- **`GhosterNet_x64.exe`** — установщик Windows (создает ярлыки, настраивает интеграцию и ассоциации протоколов `ghosternet://` и `tg-ws://`);
+- **`GhosterNet_x64-portable.7z`** — портативная версия без необходимости инсталляции.
 
 ### 2. Первый запуск
 
 > [!IMPORTANT]
-> Приложению требуются права **Администратора** для управления пакетным драйвером `WinDivert64.sys`, службой DNS и системным файлом `hosts`. При первом запуске подтвердите запрос UAC.
+> Для управления сетевым драйвером `WinDivert64.sys`, службой DNS и маршрутизацией приложению требуются права администратора.
 
-1. **Запуск Zapret**: на вкладке «Zapret» нажмите кнопку **«Тестировать стратегии»**. Клиент проверит доступность YouTube и Discord через разные стратегии и автоматически включит лучшую для вашего провайдера.
-2. **Запуск Telegram WS**: на вкладке «Telegram» нажмите **«Быстрый подбор (Fast Tune)»**, затем нажмите **«Подключить в Telegram»**.
-3. **Запуск DNS-AI**: на вкладке «DNS-AI» выберите апстрим (например, `Comss (DoH)`) и переведите тумблер во включённое положение — ChatGPT и Google Gemini заработают мгновенно.
-4. **Google Antigravity IDE**: на вкладке «Antigravity» нажмите кнопку **«Быстрый запуск»** — редактор запустится с автоматической разблокировкой.
+1. **Запуск Zapret**: на вкладке «Zapret» запустите автоматический тест стратегий. Приложение определит оптимальный профиль для вашего провайдера.
+2. **Запуск Telegram WS**: на вкладке «Telegram» запустите быстрый подбор и нажмите «Подключить в Telegram».
+3. **Запуск Universal VPN**: на вкладке «VPN» добавьте ссылку подписки или файл `.conf`, выберите сервер и нажмите кнопку подключения.
+4. **Запуск DNS-AI**: на вкладке «DNS-AI» активируйте резолвер для доступа к ИИ-сервисам без VPN.
+5. **Запуск Google Antigravity**: на вкладке «Antigravity» нажмите «Быстрый запуск» для работы в среде разработки.
 
 ---
 
-## 🛠️ Сборка из исходного кода
+## Сборка из исходного кода
 
-### Предварительные требования
-- **ОС**: Windows 10 или Windows 11 (64-бит)
-- **Node.js**: версия 20.x или новее
-- **pnpm**: версия 9.x (`npm install -g pnpm`)
-- **Git**
+### Требования
+- Windows 10 или 11 (64-бит);
+- Node.js версии 20 или новее;
+- pnpm версии 9 или новее (`npm install -g pnpm`);
+- Git.
 
-### Инструкция по сборке
+### Инструкция
 
 ```bash
 # 1. Клонирование репозитория
@@ -368,85 +331,81 @@ cd GhosterNetApp
 # 2. Установка зависимостей
 pnpm install
 
-# 3. Запуск приложения в режиме разработки
+# 3. Запуск в режиме разработки
 pnpm dev
 
-# 4. Проверка типов TypeScript
+# 4. Проверка типов и линтинг
 pnpm typecheck
+pnpm lint
 
-# 5. Сборка релизных дистрибутивов (Installer .exe + Portable .7z)
+# 5. Сборка исполняемых файлов (Installer .exe + Portable .7z)
 pnpm run build:win
 ```
 
-Собранные файлы будут находиться в папке `dist/`:
-- `dist/GhosterNet_x64.exe` (~172 МБ)
-- `dist/GhosterNet_x64-portable.7z` (~148 МБ)
+Готовые файлы будут созданы в каталоге `dist/`:
+- `dist/GhosterNet_x64.exe`
+- `dist/GhosterNet_x64-portable.7z`
 
 ---
 
-## ❓ Часто задаваемые вопросы (FAQ)
+## Часто задаваемые вопросы (FAQ)
 
 <details>
-<summary><strong>1. Безопасно ли приложение? Антивирус ругается на WinDivert64.sys.</strong></summary>
+<summary><strong>1. Безопасно ли приложение? Антивирус предупреждает о WinDivert64.sys.</strong></summary>
 <br>
-Да, GhosterNet полностью безопасен, а его исходный код на 100% открыт под лицензией GPL-3.0. Драйвер <code>WinDivert64.sys</code> — это всемирно известный открытый драйвер захвата пакетов, имеющий официальную цифровую подпись. Некоторые антивирусы могут ложно срабатывать на драйверы перехвата сетевых пакетов (False Positive). Добавьте папку с программой в исключения антивируса.
+Исходный код GhosterNet полностью открыт под лицензией GPL-3.0. Драйвер <code>WinDivert64.sys</code> — стандартный инструмент перехвата сетевых пакетов с официальной цифровой подписью. Некоторые защитные системы могут выдавать ложные срабатывания (False Positive) на драйверы прямого доступа к сетевому стеку.
 </details>
 
 <details>
-<summary><strong>2. Что делать, если пропал интернет после некорректного закрытия ПК?</strong></summary>
+<summary><strong>2. Что делать при сбое сетевого подключения?</strong></summary>
 <br>
-Откройте GhosterNet, перейдите во вкладку <strong>«Диагностика»</strong> и нажмите кнопку <strong>«Починить сеть в 1 клик» (Auto-Fix)</strong>. Приложение мгновенно сбросит кэш DNS, снимет зависшие блокировки драйверов, восстановит стандартные настройки адаптеров Windows и перезапустит службу фильтрации BFE.
+В разделе «Диагностика» воспользуйтесь функцией «Починить сеть в 1 клик». Приложение сбросит кэш DNS, освободит сокеты драйвера WinDivert, перезапустит службу BFE и восстановит исходные параметры сетевых адаптеров.
 </details>
 
 <details>
-<summary><strong>3. Можно ли использовать GhosterNet одновременно с обычным VPN?</strong></summary>
+<summary><strong>3. Можно ли использовать GhosterNet одновременно с другим VPN?</strong></summary>
 <br>
-<strong>Да!</strong> В GhosterNet встроена система <em>VPN Coexistence</em>. Приложение автоматически обнаруживает активные виртуальные сетевые адаптеры (WireGuard, OpenVPN, TUN/TAP, WARP) и исключает их IP-адреса и UDP-порты из перехвата WinDivert, предотвращая любые зацикливания или конфликты маршрутизации.
+Да. Встроенный механизм VPN Coexistence автоматически определяет виртуальные сетевые интерфейсы (WireGuard, OpenVPN, TUN/TAP, WARP) и исключает их трафик из перехвата драйвером WinDivert.
 </details>
 
 <details>
-<summary><strong>4. Почему YouTube работает, а голосовые каналы Discord не подключаются?</strong></summary>
+<summary><strong>4. В чем разница между Stub 127.0.0.1:53 и нативным DoH Windows 11 в DNS-AI?</strong></summary>
 <br>
-Для работы голосовых каналов Discord требуется прохождение UDP-пакетов. Убедитесь, что в настройках стратегии Zapret параметр <strong>«Игровой фильтр»</strong> установлен в режим <code>TCP + UDP</code>, а также нажмите кнопку «Очистить кэш Discord» во вкладке «Диагностика».
+Режим Stub запускает локальную службу на порту 53 и совместим с Windows 10 и 11. Режим нативного DoH использует встроенный стек DNS-over-HTTPS операционной системы Windows 11 без занятия локального порта.
 </details>
 
 <details>
-<summary><strong>5. В чём разница между Stub 127.0.0.1:53 и нативным DoH Windows 11 в DNS-AI?</strong></summary>
+<summary><strong>5. Как перенести настройки на другой компьютер?</strong></summary>
 <br>
-- <strong>Stub (127.0.0.1:53)</strong>: системная служба DnsAiClient слушает порт 53 локально и подходит для любых версий Windows 10 и 11.<br>
-- <strong>Нативный DoH Windows 11</strong>: использует встроенный в Windows 11 движок DNS-over-HTTPS на уровне операционной системы, не занимая локальный порт 53. Оба режима обеспечивают полную разблокировку ChatGPT и Google Gemini.
-</details>
-
-<details>
-<summary><strong>6. Как перенести настройки на другой компьютер?</strong></summary>
-<br>
-Во вкладке «Сервисы и Списки» нажмите кнопку <strong>«Экспорт профиля»</strong> и сохраните файл <code>.ghosternet</code>. На новом компьютере откройте GhosterNet, нажмите <strong>«Импорт профиля»</strong> и выберите этот файл. Все ваши стратегии, списки и мосты перенесутся мгновенно.
+В разделе «Сервисы и списки» нажмите «Экспорт профиля» для сохранения конфигурации в файл <code>.ghosternet</code>. На целевом компьютере выберите «Импорт профиля».
 </details>
 
 ---
 
-## ❤️ Благодарности и сторонние проекты
+## Благодарности и открытые компоненты
 
-GhosterNet объединяет и развивает наработки потрясающих проектов с открытым исходным кодом:
+В проекте используются разработки и компоненты открытого сообщества:
 
-- **[bol-van/zapret](https://github.com/bol-van/zapret)** — фундаментальный проект для обхода DPI на пакетном уровне;
-- **[Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)** — готовые сборки, стратегии и сервис-скрипты Zapret для Windows;
-- **[Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)** — высокопроизводительный локальный прокси MTProto over WebSocket;
-- **[confeden/DNS-AI](https://github.com/confeden/DNS-AI)** — шифрованный DNS-резолвер для обхода геоблокировок ИИ;
-- **[confeden/Antigravity](https://github.com/confeden/Antigravity)** — модуль разблокировки Google Antigravity IDE;
-- **[basil00/WinDivert](https://reqrypt.org/windivert.html)** — драйвер перехвата и модификации сетевых пакетов в пользовательском режиме Windows.
+- **[bol-van/zapret](https://github.com/bol-van/zapret)** — концепция и реализация обхода DPI на пакетном уровне;
+- **[Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)** — бинарные сборки winws и наборы стратегий;
+- **[Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)** — реализация локального WebSocket-моста для Telegram;
+- **[SagerNet/sing-box](https://github.com/SagerNet/sing-box)** — высокопроизводительное универсальное сетевое ядро;
+- **[Psiphon-Labs/psiphon-tunnel-core](https://github.com/Psiphon-Labs/psiphon-tunnel-core)** — клиент распределенной отказоустойчивой сети;
+- **[confeden/DNS-AI](https://github.com/confeden/DNS-AI)** — шифрованный DNS-резолвер для обхода региональных ограничений;
+- **[confeden/Antigravity](https://github.com/confeden/Antigravity)** — модуль разблокировки среды Google Antigravity IDE;
+- **[basil00/WinDivert](https://reqrypt.org/windivert.html)** — драйвер захвата и модификации сетевых пакетов Windows.
 
 ---
 
-## 📄 Лицензия
+## Лицензия
 
 Проект **GhosterNet** распространяется под свободной лицензией **GNU General Public License v3.0 (GPL-3.0)**.  
 Полный текст лицензии доступен в файле [LICENSE](./LICENSE).
 
-Входящие в состав бинарные компоненты и библиотеки третьих лиц распространяются под соответствующими свободными лицензиями. Подробности смотрите в файле [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md).
+Входящие в состав сторонние бинарные компоненты и библиотеки распространяются под соответствующими лицензиями правообладателей.
 
 ---
 
 <div align="center">
-  <sub>Создано с заботой о свободе информации и удобстве пользователей. GhosterAI © 2026</sub>
+  <sub>GhosterAI © 2026</sub>
 </div>
