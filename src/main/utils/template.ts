@@ -9,7 +9,7 @@ export const CONFIG_VERSION = 5
 export const defaultConfig: AppConfig = {
   configVersion: CONFIG_VERSION,
   appTheme: 'dark',
-  accentColor: 'emerald',
+  accentColor: 'violet',
   disableTray: false,
   hideTaskbarIcon: false,
   autoLaunch: false,

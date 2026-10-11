@@ -17,15 +17,12 @@ import {
   dnsAiCheckUpdate, agCheckUpdate,
   profilesSwitch,
   getAppVersion,
-  dnsAiGetStatus,
-  agGetStatus,
   type ZapretUpdateInfo, type TgwsUpdateInfo,
-  type DnsAiUpdateInfo, type AgUpdateInfo,
-  type DnsAiStatus, type AgUnlockerStatus
+  type DnsAiUpdateInfo, type AgUpdateInfo
 } from '@renderer/utils/ipc'
 import { Button } from '@renderer/components/ui/button'
 import { POWER_ON_BANNER_STYLE, BUNDLED_TGWS_VERSION, BUNDLED_ZAPRET_VERSION } from '@renderer/lib/utils'
-import { RotateCw, Sparkles, X, Layers, Rocket, ShieldCheck } from 'lucide-react'
+import { RotateCw, Sparkles, X, Layers } from 'lucide-react'
 import Power from '@renderer/assets/on_icon.svg'
 import Pause from '@renderer/assets/pause_icon.svg'
 
@@ -317,12 +314,8 @@ const Home: React.FC = () => {
 
   // App version pulled from main via IPC (electron's app.getVersion()
   const [appVersion, setAppVersion] = useState<string | null>(null)
-  const [dnsAiStatus, setDnsAiStatus] = useState<DnsAiStatus | null>(null)
-  const [agStatus, setAgStatus] = useState<AgUnlockerStatus | null>(null)
   useEffect(() => {
     getAppVersion().then(setAppVersion).catch(() => setAppVersion(null))
-    dnsAiGetStatus().then(setDnsAiStatus).catch(() => setDnsAiStatus(null))
-    agGetStatus(false).then(setAgStatus).catch(() => setAgStatus(null))
   }, [])
 
   const [reloading, setReloading] = useState(false)
@@ -356,10 +349,6 @@ const Home: React.FC = () => {
       setReloading(false)
     }
   }
-
-  const agBypassActive = Boolean(
-    agStatus && (agStatus.relayRunning || agStatus.nrptApplied || agStatus.proxyEnvSet)
-  )
 
   return (
     <BasePage>
@@ -443,54 +432,6 @@ const Home: React.FC = () => {
           />
         </div>
         <div className="flex flex-col items-center justify-center gap-2 pt-4 pb-8">
-          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-            {zapretStrategy && (
-              <span>
-                Стратегия:{' '}
-                <button
-                  type="button"
-                  onClick={() => navigate('/zapret')}
-                  className="font-mono text-foreground hover:underline cursor-pointer"
-                >
-                  {zapretStrategy.replace(/\.bat$/i, '')}
-                </button>
-              </span>
-            )}
-            {appConfig?.dns?.active && (
-              <span>
-                {'• DNS: '}
-                <button
-                  type="button"
-                  onClick={() => navigate('/network')}
-                  className="font-mono text-emerald-400 hover:underline cursor-pointer"
-                >
-                  {appConfig.dns.presetId}
-                </button>
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => navigate('/network')}
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-card/60 px-2.5 py-0.5 text-[11px] hover:bg-accent/40 cursor-pointer"
-            >
-              <ShieldCheck className="size-3 text-emerald-400" />
-              <span>DNS-AI:</span>
-              <span className={dnsAiStatus?.enabled ? 'text-emerald-400 font-medium' : 'text-muted-foreground'}>
-                {dnsAiStatus?.enabled ? 'Вкл' : 'Выкл'}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/antigravity')}
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-card/60 px-2.5 py-0.5 text-[11px] hover:bg-accent/40 cursor-pointer"
-            >
-              <Rocket className="size-3 text-primary" />
-              <span>Antigravity:</span>
-              <span className={agBypassActive ? 'text-emerald-400 font-medium' : 'text-muted-foreground'}>
-                {agBypassActive ? 'Активен' : 'Настроить'}
-              </span>
-            </button>
-          </div>
           <Button
             variant="outline"
             size="sm"

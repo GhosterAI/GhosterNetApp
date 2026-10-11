@@ -307,7 +307,7 @@ const Settings: React.FC = () => {
                   <Button
                     key={theme}
                     size="sm"
-                    variant={appConfig?.appTheme === theme ? 'default' : 'outline'}
+                    variant={(appConfig?.appTheme ?? 'dark') === theme ? 'default' : 'outline'}
                     onClick={() => patchAppConfig({ appTheme: theme })}
                   >
                     {themeLabels[theme]}
@@ -320,7 +320,7 @@ const Settings: React.FC = () => {
               <Label className="text-sm">Акцентный цвет</Label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {ACCENT_COLORS.map((c) => {
-                  const selected = (appConfig?.accentColor ?? 'default') === c.id
+                  const selected = (appConfig?.accentColor ?? 'violet') === c.id
                   return (
                     <Button
                       key={c.id}

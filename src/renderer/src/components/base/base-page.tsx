@@ -4,7 +4,6 @@ import WindowControls from '@renderer/components/window-controls'
 import React, { forwardRef, useImperativeHandle, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
-import LiveSecurityHud from '@renderer/components/live-security-hud'
 
 const sidebarPaths = new Set(['/home', '/telegram', '/zapret', '/services', '/network', '/logs', '/settings', '/about'])
 const isMac = platform === 'darwin'
@@ -49,7 +48,6 @@ const BasePage = forwardRef<HTMLDivElement, Props>((props, ref) => {
             {!isMac && <WindowControls />}
           </div>
         </div>
-        <LiveSecurityHud />
       </div>
       <div className="content flex-1 overflow-y-auto custom-scrollbar">
         {props.children}

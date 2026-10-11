@@ -15,8 +15,8 @@ import { attachLogsStore } from '@renderer/store/logs-store'
 import { attachTgwsStore } from '@renderer/store/tgws-store'
 import { attachZapretStore } from '@renderer/store/zapret-store'
 import { attachZapretTestStore } from '@renderer/store/zapret-test-store'
-import mapDark from '@renderer/assets/map_darktheme.svg'
-import mapLight from '@renderer/assets/map_lighttheme.svg'
+import bgDark from '@renderer/assets/black.jpg'
+import bgLight from '@renderer/assets/white.jpg'
 
 const ACCENT_HEX: Record<string, { primary: string; fg: string }> = {
   violet: { primary: '#8B5CF6', fg: '#FAFAFA' },
@@ -29,12 +29,12 @@ const ACCENT_HEX: Record<string, { primary: string; fg: string }> = {
 
 const App: React.FC = () => {
   const { appConfig } = useAppConfig()
-  const { appTheme = 'dark', customTheme, accentColor = 'default' } = appConfig || {}
-  const { setTheme, resolvedTheme } = useTheme()
+  const { appTheme = 'dark', customTheme, accentColor = 'violet' } = appConfig || {}
+  const { setTheme } = useTheme()
   const page = useRoutes(routes)
   const location = useLocation()
   const isHome = location.pathname === '/' || location.pathname.includes('/home')
-  const mapBg = resolvedTheme === 'light' ? mapLight : mapDark
+  const mapBg = appTheme === 'light' ? bgLight : bgDark
 
   useEffect(() => {
     const d1 = attachLogsStore()

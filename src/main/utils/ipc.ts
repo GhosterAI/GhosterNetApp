@@ -420,51 +420,63 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('config:exportFull', h(() => exportFullConfig()))
   ipcMain.handle('config:importFull', h((raw) => importFullConfig(raw as string)))
   ipcMain.handle('config:exportDialog', async (e) => {
-    const win = BrowserWindow.fromWebContents(e.sender)
-    const json = await exportFullConfig()
-    const result = win
-      ? await dialog.showSaveDialog(win, {
-          title: 'Экспорт профиля GhosterNet',
-          defaultPath: `ghosternet-profile-${new Date().toISOString().slice(0, 10)}.ghosternet`,
-          filters: [
-            { name: 'GhosterNet Backup (*.ghosternet)', extensions: ['ghosternet'] },
-            { name: 'JSON (*.json)', extensions: ['json'] }
-          ]
-        })
-      : await dialog.showSaveDialog({
-          title: 'Экспорт профиля GhosterNet',
-          defaultPath: `ghosternet-profile-${new Date().toISOString().slice(0, 10)}.ghosternet`,
-          filters: [
-            { name: 'GhosterNet Backup (*.ghosternet)', extensions: ['ghosternet'] },
-            { name: 'JSON (*.json)', extensions: ['json'] }
-          ]
-        })
-    if (result.canceled || !result.filePath) return { saved: false }
-    const { writeFileSync } = await import('fs')
-    writeFileSync(result.filePath, json, 'utf8')
-    return { saved: true, path: result.filePath }
+    try {
+      const win = BrowserWindow.fromWebContents(e.sender)
+      const json = await exportFullConfig()
+      const result = win
+        ? await dialog.showSaveDialog(win, {
+            title: 'Экспорт профиля GhosterNet',
+            defaultPath: `ghosternet-profile-${new Date().toISOString().slice(0, 10)}.ghosternet`,
+            filters: [
+              { name: 'GhosterNet Backup (*.ghosternet)', extensions: ['ghosternet'] },
+              { name: 'JSON (*.json)', extensions: ['json'] }
+            ]
+          })
+        : await dialog.showSaveDialog({
+            title: 'Экспорт профиля GhosterNet',
+            defaultPath: `ghosternet-profile-${new Date().toISOString().slice(0, 10)}.ghosternet`,
+            filters: [
+              { name: 'GhosterNet Backup (*.ghosternet)', extensions: ['ghosternet'] },
+              { name: 'JSON (*.json)', extensions: ['json'] }
+            ]
+          })
+      if (result.canceled || !result.filePath) {
+        return { ok: true, value: { saved: false } }
+      }
+      writeFileSync(result.filePath, json, 'utf8')
+      return { ok: true, value: { saved: true, path: result.filePath } }
+    } catch (err: unknown) {
+      return { ok: false, message: err instanceof Error ? err.message : String(err) }
+    }
   })
   ipcMain.handle('config:importDialog', async (e) => {
-    const win = BrowserWindow.fromWebContents(e.sender)
-    const result = win
-      ? await dialog.showOpenDialog(win, {
-          title: 'Импорт профиля GhosterNet',
-          filters: [
-            { name: 'GhosterNet Backup (*.ghosternet, *.json)', extensions: ['ghosternet', 'json'] }
-          ],
-          properties: ['openFile']
-        })
-      : await dialog.showOpenDialog({
-          title: 'Импорт профиля GhosterNet',
-          filters: [
-            { name: 'GhosterNet Backup (*.ghosternet, *.json)', extensions: ['ghosternet', 'json'] }
-          ],
-          properties: ['openFile']
-        })
-    if (result.canceled || result.filePaths.length === 0) return { ok: false, message: 'Отменено' }
-    const { readFileSync } = await import('fs')
-    const content = readFileSync(result.filePaths[0], 'utf8')
-    return await importFullConfig(content)
+    try {
+      const win = BrowserWindow.fromWebContents(e.sender)
+      const result = win
+        ? await dialog.showOpenDialog(win, {
+            title: 'Импорт профиля GhosterNet',
+            filters: [
+              { name: 'GhosterNet Backup (*.ghosternet, *.json)', extensions: ['ghosternet', 'json'] }
+            ],
+            properties: ['openFile']
+          })
+        : await dialog.showOpenDialog({
+            title: 'Импорт профиля GhosterNet',
+            filters: [
+              { name: 'GhosterNet Backup (*.ghosternet, *.json)', extensions: ['ghosternet', 'json'] }
+            ],
+            properties: ['openFile']
+          })
+      if (result.canceled || result.filePaths.length === 0) {
+        return { ok: true, value: { ok: false, message: 'Отменено' } }
+      }
+      const { readFileSync } = await import('node:fs')
+      const content = readFileSync(result.filePaths[0], 'utf8')
+      const imported = await importFullConfig(content)
+      return { ok: true, value: imported }
+    } catch (err: unknown) {
+      return { ok: false, message: err instanceof Error ? err.message : String(err) }
+    }
   })
 
   // ---- GhosterNet self-update ---------------------------------------------
@@ -530,18 +542,24 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('ag:removeManualPath', h((dirPath) => removeAgManualPath(dirPath as string)))
   ipcMain.handle('ag:logs', h(() => getAgLogs()))
   ipcMain.handle('ag:pickFolder', async (e) => {
-    const win = BrowserWindow.fromWebContents(e.sender)
-    const result = win
-      ? await dialog.showOpenDialog(win, {
-          title: 'Выберите папку установки Antigravity',
-          properties: ['openDirectory']
-        })
-      : await dialog.showOpenDialog({
-          title: 'Выберите папку установки Antigravity',
-          properties: ['openDirectory']
-        })
-    if (result.canceled || result.filePaths.length === 0) return null
-    return result.filePaths[0]
+    try {
+      const win = BrowserWindow.fromWebContents(e.sender)
+      const result = win
+        ? await dialog.showOpenDialog(win, {
+            title: 'Выберите папку установки Antigravity',
+            properties: ['openDirectory']
+          })
+        : await dialog.showOpenDialog({
+            title: 'Выберите папку установки Antigravity',
+            properties: ['openDirectory']
+          })
+      if (result.canceled || result.filePaths.length === 0) {
+        return { ok: true, value: null }
+      }
+      return { ok: true, value: result.filePaths[0] }
+    } catch (err: unknown) {
+      return { ok: false, message: err instanceof Error ? err.message : String(err) }
+    }
   })
 
   // ---- Quit / restart -----------------------------------------------------
