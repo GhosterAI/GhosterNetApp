@@ -460,8 +460,22 @@ const VpnPage: React.FC = () => {
                 </span>
               </div>
 
-              {subscriptions.length > 0 && (
-                <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={isTestingLatency || servers.length === 0}
+                  onClick={handleTestLatencies}
+                  title="Замер пинга"
+                  className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
+                >
+                  {isTestingLatency ? (
+                    <Spinner className="size-3.5 text-muted-foreground animate-spin" />
+                  ) : (
+                    <Zap className="size-3.5" />
+                  )}
+                </Button>
+                {subscriptions.length > 0 && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -474,8 +488,8 @@ const VpnPage: React.FC = () => {
                   >
                     <RefreshCw className={cn('size-3.5', refreshingSubId && 'animate-spin text-primary')} />
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Search Input */}
@@ -573,6 +587,19 @@ const VpnPage: React.FC = () => {
                           className="flex items-center gap-1 shrink-0"
                           onClick={(e) => e.stopPropagation()}
                         >
+                          <button
+                            type="button"
+                            disabled={isTestingLatency || servers.length === 0}
+                            onClick={handleTestLatencies}
+                            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-40"
+                            title="Замер пинга"
+                          >
+                            {isTestingLatency ? (
+                              <Spinner className="size-3 text-muted-foreground animate-spin" />
+                            ) : (
+                              <Zap className="size-3" />
+                            )}
+                          </button>
                           <button
                             type="button"
                             disabled={isRefreshing}
@@ -1015,42 +1042,24 @@ const VpnPage: React.FC = () => {
             )}
           </div>
 
-          {/* Bottom Action Bar: Ping Test & Restart */}
-          <div className="mt-4 pt-4 border-t border-border/30 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              {/* Test Ping Button */}
+          {/* Bottom Action Bar: Restart (if connected) */}
+          {isConnected && (
+            <div className="mt-4 pt-4 border-t border-border/30 flex items-center justify-end">
               <Button
-                variant="default"
+                variant="outline"
                 size="sm"
-                disabled={isTestingLatency || servers.length === 0}
-                onClick={handleTestLatencies}
-                className="h-9 px-5 rounded-xl text-xs gap-2 font-medium bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-600/90 text-primary-foreground shadow-md cursor-pointer transition-all"
+                onClick={() => {
+                  vpnRestart()
+                    .then(() => toast.success('VPN перезапущен'))
+                    .catch((e) => toast.error('Ошибка перезапуска', { description: String(e) }))
+                }}
+                className="h-9 px-3 rounded-xl text-xs gap-1.5 border-border/50 bg-background/30 hover:bg-background/70"
               >
-                {isTestingLatency ? (
-                  <Spinner className="size-3.5" />
-                ) : (
-                  <Zap className="size-3.5 text-amber-300" />
-                )}
-                <span>Замер пинга</span>
+                <RotateCw className="size-3.5" />
+                <span>Перезапустить</span>
               </Button>
-
-              {isConnected && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    vpnRestart()
-                      .then(() => toast.success('VPN перезапущен'))
-                      .catch((e) => toast.error('Ошибка перезапуска', { description: String(e) }))
-                  }}
-                  className="h-9 px-3 rounded-xl text-xs gap-1.5 border-border/50 bg-background/30 hover:bg-background/70"
-                >
-                  <RotateCw className="size-3.5" />
-                  <span>Перезапустить</span>
-                </Button>
-              )}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </BasePage>

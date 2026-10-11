@@ -107,9 +107,6 @@ export async function startPsiphon(): Promise<void> {
     SponsorId: 'FFFFFFFFFFFFFFFF',
     RemoteServerListUrl:
       'https://s3.amazonaws.com/psiphon/web/mjr4-p23r-puwl/server_list_compressed',
-    RemoteServerListURLs: [
-      'https://s3.amazonaws.com/psiphon/web/mjr4-p23r-puwl/server_list_compressed'
-    ],
     RemoteServerListDownloadFilename: 'remote_server_list',
     RemoteServerListSignaturePublicKey:
       'MIICIDANBgkqhkiG9w0BAQEFAAOCAg0AMIICCAKCAgEAt7Ls+/39r+T6zNW7GiVpJfzq/xvL9SBH5rIFnk0RXYEYavax3WS6HOD35eTAqn8AniOwiH+DOkvgSKF2caqk/y1dfq47Pdymtwzp9ikpB1C5OfAysXzBiwVJlCdajBKvBZDerV1cMvRzCKvKwRmvDmHgphQQ7WfXIGbRbmmk6opMBh3roE42KcotLFtqp0RRwLtcBRNtCdsrVsjiI1Lqz/lH+T61sGjSjQ3CHMuZYSQJZo/KrvzgQXpkaCTdbObxHqb6/+i1qaVOfEsvjoiyzTxJADvSytVtcTjijhPEV6XskJVHE1Zgl+7rATr/pDQkw6DPCNBS1+Y6fy7GstZALQXwEDN/qhQI9kWkHijT8ns+i1vGg00Mk/6J75arLhqcodWsdeG/M/moWgqQAnlZAGVtJI1OgeF5fsPpXu4kctOfuZlGjVZXQNW34aOzm8r8S0eVZitPlbhcPiR4gT/aSMz/wd8lZlzZYsje/Jr8u/YtlwjjreZrGRmG8KMOzukV3lLmMppXFMvl4bxv6YFEmIuTsOhbLTwFgh7KYNjodLj/LsqRVfwz31PgWQFTEPICV7GCvgVlPRxnofqKSjgTWI4mxDhBpVcATvaoBl1L/6WLbFvBsoAUBItWwctO2xalKxF5szhGm8lccoc5MZr8kfE0uxMgsxz4er68iCID+rsCAQM=',
@@ -233,9 +230,16 @@ export async function startPsiphon(): Promise<void> {
             }
             break
           }
+          case 'Error': {
+            const errStr = String(obj.data?.message || 'Неизвестная ошибка Psiphon')
+            log('error', `Psiphon ошибка: ${errStr}`)
+            setStatus({ lastError: errStr })
+            break
+          }
           default:
             if (obj.noticeType) {
-              log('debug', `[psiphon notice] ${obj.noticeType}`)
+              const extra = obj.data?.message ? `: ${String(obj.data.message)}` : ''
+              log('debug', `[psiphon notice] ${obj.noticeType}${extra}`)
             }
             break
         }
@@ -279,7 +283,8 @@ export async function startPsiphon(): Promise<void> {
         setStatus({ state: 'stopped', pid: undefined })
         log('info', 'Psiphon остановлен')
       } else {
-        const msg = `Psiphon аварийно завершился (код: ${code ?? 'none'}, сигнал: ${signal ?? 'none'})`
+        const errorDetail = status.lastError ? ` — ${status.lastError}` : ''
+        const msg = `Psiphon аварийно завершился (код: ${code ?? 'none'}, сигнал: ${signal ?? 'none'})${errorDetail}`
         log('warn', msg)
         setStatus({ state: 'stopped', pid: undefined, lastError: msg })
       }

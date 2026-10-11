@@ -18,16 +18,12 @@ import {
   psiphonStart, psiphonStop, psiphonRestart,
   psiphonSetSystemProxy,
   vpnStart, vpnStop, vpnRestart,
-  zapretCheckUpdate, tgwsCheckUpdate,
-  dnsAiCheckUpdate, agCheckUpdate,
   profilesSwitch,
-  getAppVersion,
-  type ZapretUpdateInfo, type TgwsUpdateInfo,
-  type DnsAiUpdateInfo, type AgUpdateInfo
+  getAppVersion
 } from '@renderer/utils/ipc'
 import { Button } from '@renderer/components/ui/button'
 import { POWER_ON_BANNER_STYLE, BUNDLED_TGWS_VERSION, BUNDLED_ZAPRET_VERSION } from '@renderer/lib/utils'
-import { RotateCw, Sparkles, X, Layers, Globe, ShieldCheck } from 'lucide-react'
+import { RotateCw, Layers, Globe } from 'lucide-react'
 import { CountryFlag, detectCountryCode } from '@renderer/components/ui/country-flag'
 import Power from '@renderer/assets/on_icon.svg'
 import Pause from '@renderer/assets/pause_icon.svg'
@@ -237,47 +233,6 @@ const Home: React.FC = () => {
     }
   }
 
-  // ---- Update notices (Zapret + TgWsProxy + DNS-AI + Antigravity)
-  const [zapretUpdate, setZapretUpdate] = useState<ZapretUpdateInfo | null>(null)
-  const [tgwsUpdate, setTgwsUpdate] = useState<TgwsUpdateInfo | null>(null)
-  const [dnsAiUpdate, setDnsAiUpdate] = useState<DnsAiUpdateInfo | null>(null)
-  const [agUpdate, setAgUpdate] = useState<AgUpdateInfo | null>(null)
-  const [zapretSessionDismissed, setZapretSessionDismissed] = useState(false)
-  const [tgwsSessionDismissed, setTgwsSessionDismissed] = useState(false)
-  const [dnsAiSessionDismissed, setDnsAiSessionDismissed] = useState(false)
-  const [agSessionDismissed, setAgSessionDismissed] = useState(false)
-
-  useEffect(() => {
-    zapretCheckUpdate(false).then(setZapretUpdate).catch(() => setZapretUpdate(null))
-    tgwsCheckUpdate(false).then(setTgwsUpdate).catch(() => setTgwsUpdate(null))
-    dnsAiCheckUpdate(false).then(setDnsAiUpdate).catch(() => setDnsAiUpdate(null))
-    agCheckUpdate(false).then(setAgUpdate).catch(() => setAgUpdate(null))
-  }, [])
-
-  const showZapretBanner =
-    !!zapretUpdate &&
-    zapretUpdate.hasUpdate &&
-    !zapretUpdate.dismissed &&
-    !!zapretUpdate.assetUrl &&
-    !zapretSessionDismissed
-  const showTgwsBanner =
-    !!tgwsUpdate &&
-    tgwsUpdate.hasUpdate &&
-    !tgwsUpdate.dismissed &&
-    !!tgwsUpdate.assetUrl &&
-    !tgwsSessionDismissed
-  const showDnsAiBanner =
-    !!dnsAiUpdate &&
-    dnsAiUpdate.hasUpdate &&
-    !dnsAiUpdate.dismissed &&
-    !!dnsAiUpdate.assetUrl &&
-    !dnsAiSessionDismissed
-  const showAgBanner =
-    !!agUpdate &&
-    agUpdate.hasUpdate &&
-    !agUpdate.dismissed &&
-    !!agUpdate.assetUrl &&
-    !agSessionDismissed
 
   const toggleTgws = async (next: boolean): Promise<void> => {
     try {
@@ -388,20 +343,6 @@ const Home: React.FC = () => {
     }
   }
 
-  const pendingUpdates = [
-    showZapretBanner && zapretUpdate ? `Zapret v${zapretUpdate.latest}` : null,
-    showTgwsBanner && tgwsUpdate ? `TgWs v${tgwsUpdate.latest}` : null,
-    showDnsAiBanner && dnsAiUpdate ? `DNS-AI v${dnsAiUpdate.latest}` : null,
-    showAgBanner && agUpdate ? `Antigravity v${agUpdate.latest}` : null
-  ].filter(Boolean) as string[]
-
-  const dismissAllBanners = (): void => {
-    setZapretSessionDismissed(true)
-    setTgwsSessionDismissed(true)
-    setDnsAiSessionDismissed(true)
-    setAgSessionDismissed(true)
-  }
-
   const anyProcessActive =
     tgws.state === 'running' ||
     tgws.state === 'error' ||
@@ -415,34 +356,6 @@ const Home: React.FC = () => {
   return (
     <BasePage>
       <div className="relative flex flex-col h-full">
-        {pendingUpdates.length > 0 && (
-          <div className="px-4 pt-1 flex justify-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/40 bg-card/65 backdrop-blur-xl px-3.5 py-1 text-xs shadow-sm">
-              <Sparkles className="size-3.5 text-primary shrink-0" />
-              <span className="text-muted-foreground truncate max-w-[360px]">
-                Доступны обновления:{' '}
-                <span className="text-foreground font-medium">{pendingUpdates.join(', ')}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => navigate('/settings')}
-                className="text-primary hover:underline font-medium cursor-pointer ml-1"
-              >
-                Обновить
-              </button>
-              <button
-                type="button"
-                onClick={dismissAllBanners}
-                className="text-muted-foreground hover:text-foreground cursor-pointer p-0.5"
-                title="Скрыть"
-              >
-                <X className="size-3" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Quick Profile Switcher Pill Bar — only shown when user has multiple profiles */}
         {profiles.length > 1 && (
           <div className="px-4 pt-2 flex flex-wrap items-center justify-center gap-1.5">
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground mr-1">
@@ -468,7 +381,7 @@ const Home: React.FC = () => {
             label="Zapret"
             status={zapret}
             onToggle={toggleZapret}
-            version={appConfig?.zapret?.installedVersion ?? zapretUpdate?.installed ?? BUNDLED_ZAPRET_VERSION}
+            version={appConfig?.zapret?.installedVersion ?? BUNDLED_ZAPRET_VERSION}
             disabled={isZapretTesting}
             disabledReason={
               isZapretTesting
@@ -480,7 +393,7 @@ const Home: React.FC = () => {
             label="Telegram"
             status={tgws}
             onToggle={toggleTgws}
-            version={appConfig?.tgws?.installedVersion ?? tgwsUpdate?.installed ?? BUNDLED_TGWS_VERSION}
+            version={appConfig?.tgws?.installedVersion ?? BUNDLED_TGWS_VERSION}
           />
           <PowerToggle
             label="VPN"
@@ -550,78 +463,6 @@ const Home: React.FC = () => {
           </div>
         )}
 
-        {/* Universal VPN Connecting Hint Pill */}
-        {vpn.state === 'starting' && (
-          <div className="flex justify-center pb-2 px-4 animate-in fade-in duration-300">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 backdrop-blur-xl px-4 py-1.5 text-xs text-primary shadow-sm">
-              <Spinner className="size-3 text-primary animate-spin" />
-              <span>Подключение к серверу VPN… Нажмите кнопку еще раз для отмены</span>
-            </div>
-          </div>
-        )}
-
-        {/* Universal VPN Quick Controls Pill */}
-        {vpn.state === 'running' && (
-          <div className="flex justify-center pb-2 px-4">
-            <div className="inline-flex flex-wrap items-center justify-center gap-2.5 rounded-full border border-border/40 bg-card/65 backdrop-blur-xl px-4 py-1.5 text-xs shadow-sm">
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <ShieldCheck className="size-3.5 text-primary" />
-                <span className="font-medium text-foreground flex items-center gap-1.5">
-                  <CountryFlag
-                    code={vpn.activeServer?.countryCode || detectCountryCode(vpn.activeServer?.name ?? '')}
-                    className="w-4 h-3 rounded-[2px]"
-                  />
-                  <span>VPN: {stripEmojis(vpn.activeServer?.name) || vpn.activeServer?.name || 'Активен'}</span>
-                </span>
-              </span>
-              <span className="h-3 w-px bg-border/40" />
-              <span className="text-muted-foreground text-[11px]">
-                {vpn.tunMode ? 'Режим TUN' : 'Прокси'}:{' '}
-                <span className="font-semibold text-foreground uppercase">
-                  {vpn.activeServer?.type || 'sing-box'}
-                </span>{' '}
-                (
-                {vpn.routingMode === 'bypass-ru'
-                  ? 'Анти-блокировка РФ'
-                  : vpn.routingMode === 'global'
-                    ? 'Весь трафик'
-                    : 'Только заблокированное'}
-                )
-              </span>
-              {vpn.activeServer?.latencyMs != null && (
-                <>
-                  <span className="h-3 w-px bg-border/40" />
-                  <span className="font-mono text-[11px] text-emerald-400">
-                    {vpn.activeServer.latencyMs} ms
-                  </span>
-                </>
-              )}
-              <span className="h-3 w-px bg-border/40" />
-              <button
-                type="button"
-                onClick={() => {
-                  vpnStop()
-                    .then(() => toast.success('VPN отключен'))
-                    .catch((err) =>
-                      toast.error('Ошибка остановки VPN', {
-                        description: err instanceof Error ? err.message : String(err)
-                      })
-                    )
-                }}
-                className="text-destructive hover:text-destructive/80 font-medium cursor-pointer transition-colors"
-              >
-                Отключить
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/vpn')}
-                className="text-primary hover:underline font-medium cursor-pointer ml-1"
-              >
-                Настройки →
-              </button>
-            </div>
-          </div>
-        )}
         <div className="flex items-center justify-center h-12 pb-6">
           {anyProcessActive && (
             <Button
