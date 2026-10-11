@@ -28,6 +28,7 @@ import {
 import { Button } from '@renderer/components/ui/button'
 import { POWER_ON_BANNER_STYLE, BUNDLED_TGWS_VERSION, BUNDLED_ZAPRET_VERSION } from '@renderer/lib/utils'
 import { RotateCw, Sparkles, X, Layers, Globe, ShieldCheck } from 'lucide-react'
+import { CountryFlag, detectCountryCode } from '@renderer/components/ui/country-flag'
 import Power from '@renderer/assets/on_icon.svg'
 import Pause from '@renderer/assets/pause_icon.svg'
 
@@ -35,22 +36,10 @@ interface PowerToggleProps {
   label: string
   status: CoreStatus
   onToggle: (next: boolean) => Promise<void> | void
-  // Currently-installed upstream version of the underlying binary (e.g.
-  version?: string
+  // Currently-installed upstream version of the underlying binary or server badge
+  version?: React.ReactNode
   disabled?: boolean
   disabledReason?: string
-}
-
-function getCountryFlag(code?: string): string {
-  if (!code || code.length !== 2) return ''
-  try {
-    const upper = code.toUpperCase()
-    const first = upper.codePointAt(0)! - 0x41 + 0x1f1e6
-    const second = upper.codePointAt(1)! - 0x41 + 0x1f1e6
-    return String.fromCodePoint(first, second)
-  } catch {
-    return ''
-  }
 }
 
 function stripEmojis(str?: string): string {
@@ -72,7 +61,17 @@ const PowerToggle: React.FC<PowerToggleProps> = ({
     status.state === 'stopping' || pending === false ? 'disconnecting' : 'connecting'
 
   const handleClick = async (): Promise<void> => {
-    if (loading || disabled) return
+    if (disabled || pending !== null || status.state === 'stopping') return
+    // Allow canceling while starting
+    if (status.state === 'starting') {
+      setPending(false)
+      try {
+        await onToggle(false)
+      } finally {
+        setPending(null)
+      }
+      return
+    }
     const next = !isSelected
     setPending(next)
     try {
@@ -132,13 +131,14 @@ const PowerToggle: React.FC<PowerToggleProps> = ({
 
       {/* The disc */}
       <button
-        disabled={loading || disabled}
+        disabled={pending !== null || disabled || status.state === 'stopping'}
         onClick={handleClick}
-        title={disabled ? disabledReason : undefined}
+        title={disabled ? disabledReason : status.state === 'starting' ? 'Нажмите, чтобы отменить подключение' : undefined}
         className={`relative group transition-transform active:scale-95 cursor-pointer disabled:cursor-not-allowed ${
           disabled ? 'opacity-60' : ''
         }`}
       >
+
         <div
           className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 bg-radial-[at_30%_45%] backdrop-blur-xl border-2 ${
             isSelected
@@ -187,8 +187,8 @@ const PowerToggle: React.FC<PowerToggleProps> = ({
       </div>
 
       {version && (
-        <div className="mt-1 text-[11px] text-foreground/60 text-center tabular-nums truncate max-w-[170px]">
-          {/^\d/.test(version) ? `v${version}` : version}
+        <div className="mt-1 text-[11px] text-foreground/60 flex items-center justify-center gap-1.5 tabular-nums truncate max-w-[170px]">
+          {typeof version === 'string' && /^\d/.test(version) ? `v${version}` : version}
         </div>
       )}
 
@@ -487,11 +487,21 @@ const Home: React.FC = () => {
             status={vpn}
             onToggle={toggleVpn}
             version={
-              vpn.activeServer
-                ? `${getCountryFlag(vpn.activeServer.countryCode)} ${stripEmojis(vpn.activeServer.name) || vpn.activeServer.name}`.trim()
-                : appConfig?.vpn?.servers?.length
-                  ? `${appConfig.vpn.servers.length} серв.`
-                  : 'sing-box'
+              vpn.activeServer ? (
+                <span className="inline-flex items-center gap-1.5 truncate max-w-[170px]">
+                  <CountryFlag
+                    code={vpn.activeServer.countryCode || detectCountryCode(vpn.activeServer.name)}
+                    className="w-3.5 h-2.5 rounded-[1px]"
+                  />
+                  <span className="truncate">
+                    {stripEmojis(vpn.activeServer.name) || vpn.activeServer.name}
+                  </span>
+                </span>
+              ) : appConfig?.vpn?.servers?.length ? (
+                `${appConfig.vpn.servers.length} серв.`
+              ) : (
+                'sing-box'
+              )
             }
           />
           <PowerToggle
@@ -501,6 +511,16 @@ const Home: React.FC = () => {
             version={appConfig?.psiphon?.installedVersion ?? '1.0'}
           />
         </div>
+
+        {/* Psiphon Connecting Hint Pill */}
+        {psiphon.state === 'starting' && (
+          <div className="flex justify-center pb-2 px-4 animate-in fade-in duration-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 backdrop-blur-xl px-4 py-1.5 text-xs text-amber-200 shadow-sm">
+              <Spinner className="size-3 text-amber-400 animate-spin" />
+              <span>Подключение к узлам Psiphon (обычно 15–30 сек)… Нажмите кнопку еще раз для отмены</span>
+            </div>
+          </div>
+        )}
 
         {/* Psiphon Quick Controls Pill */}
         {psiphon.state === 'running' && (
@@ -530,6 +550,16 @@ const Home: React.FC = () => {
           </div>
         )}
 
+        {/* Universal VPN Connecting Hint Pill */}
+        {vpn.state === 'starting' && (
+          <div className="flex justify-center pb-2 px-4 animate-in fade-in duration-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 backdrop-blur-xl px-4 py-1.5 text-xs text-primary shadow-sm">
+              <Spinner className="size-3 text-primary animate-spin" />
+              <span>Подключение к серверу VPN… Нажмите кнопку еще раз для отмены</span>
+            </div>
+          </div>
+        )}
+
         {/* Universal VPN Quick Controls Pill */}
         {vpn.state === 'running' && (
           <div className="flex justify-center pb-2 px-4">
@@ -537,11 +567,10 @@ const Home: React.FC = () => {
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <ShieldCheck className="size-3.5 text-primary" />
                 <span className="font-medium text-foreground flex items-center gap-1.5">
-                  {vpn.activeServer?.countryCode && (
-                    <span className="text-sm select-none leading-none">
-                      {getCountryFlag(vpn.activeServer.countryCode)}
-                    </span>
-                  )}
+                  <CountryFlag
+                    code={vpn.activeServer?.countryCode || detectCountryCode(vpn.activeServer?.name ?? '')}
+                    className="w-4 h-3 rounded-[2px]"
+                  />
                   <span>VPN: {stripEmojis(vpn.activeServer?.name) || vpn.activeServer?.name || 'Активен'}</span>
                 </span>
               </span>

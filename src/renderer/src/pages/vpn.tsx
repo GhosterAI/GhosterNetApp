@@ -13,12 +13,8 @@ import {
   Server,
   Layers,
   RotateCw,
-  Laptop,
   FileText,
   ChevronDown,
-  ArrowDown,
-  ArrowUp,
-  Activity,
   X,
   Copy
 } from 'lucide-react'
@@ -28,6 +24,7 @@ import { Input } from '@renderer/components/ui/input'
 import { Switch } from '@renderer/components/ui/switch'
 import { Label } from '@renderer/components/ui/label'
 import { Spinner } from '@renderer/components/ui/spinner'
+import { CountryFlag, detectCountryCode } from '@renderer/components/ui/country-flag'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { useVpnStore } from '@renderer/store/vpn-store'
 import { cn, POWER_ON_BANNER_STYLE, POWER_OFF_BANNER_STYLE } from '@renderer/lib/utils'
@@ -46,18 +43,6 @@ import {
 import PowerIcon from '@renderer/assets/on_icon.svg'
 import PauseIcon from '@renderer/assets/pause_icon.svg'
 
-function getCountryFlag(code?: string): string {
-  if (!code || code.length !== 2) return ''
-  try {
-    const upper = code.toUpperCase()
-    const first = upper.codePointAt(0)! - 0x41 + 0x1f1e6
-    const second = upper.codePointAt(1)! - 0x41 + 0x1f1e6
-    return String.fromCodePoint(first, second)
-  } catch {
-    return ''
-  }
-}
-
 function stripEmojis(str?: string): string {
   if (!str) return ''
   return str
@@ -71,14 +56,6 @@ function formatBytes(bytes?: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
-}
-
-function formatSpeed(bytesPerSec: number): string {
-  if (bytesPerSec <= 0) return '0 KB/s'
-  const mbps = bytesPerSec / (1024 * 1024)
-  if (mbps >= 1) return `${mbps.toFixed(1)} MB/s`
-  const kbps = bytesPerSec / 1024
-  return `${kbps.toFixed(0)} KB/s`
 }
 
 function formatDate(ts?: number): string {
@@ -205,27 +182,6 @@ const VpnPage: React.FC = () => {
   const m = Math.floor((elapsed % 3600) / 60)
   const s = elapsed % 60
 
-  // Live speed tracking / simulation for visual feedback
-  const [speeds, setSpeeds] = useState<{ down: number; up: number }>({ down: 0, up: 0 })
-  useEffect(() => {
-    if (!isConnected) {
-      setSpeeds({ down: 0, up: 0 })
-      return
-    }
-    const updateSpeeds = (): void => {
-      const baseDown = vpnStatus.downloadSpeedBps ?? 48 * 1024 * 1024
-      const baseUp = vpnStatus.uploadSpeedBps ?? 32 * 1024 * 1024
-      const jitterDown = (Math.random() * 0.16 - 0.08) * baseDown
-      const jitterUp = (Math.random() * 0.16 - 0.08) * baseUp
-      setSpeeds({
-        down: Math.max(1024 * 128, baseDown + jitterDown),
-        up: Math.max(1024 * 64, baseUp + jitterUp)
-      })
-    }
-    updateSpeeds()
-    const id = setInterval(updateSpeeds, 2200)
-    return () => clearInterval(id)
-  }, [isConnected, vpnStatus.downloadSpeedBps, vpnStatus.uploadSpeedBps])
 
   // Filtered servers
   const filteredServers = useMemo(() => {
@@ -697,12 +653,15 @@ const VpnPage: React.FC = () => {
                     )}
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      {/* Country Flag (Photo 1 style) */}
-                      <div className="size-8 rounded-xl bg-card/60 border border-border/40 flex items-center justify-center shrink-0 select-none text-xl shadow-xs">
-                        {getCountryFlag(server.countryCode) || (
-                          <Server className="size-3.5 text-primary" />
-                        )}
+                      {/* Country Flag */}
+                      <div className="size-8 rounded-xl bg-card/60 border border-border/40 flex items-center justify-center shrink-0 select-none overflow-hidden shadow-xs">
+                        <CountryFlag
+                          code={server.countryCode || detectCountryCode(server.name)}
+                          className="w-5 h-3.5 rounded-[2px]"
+                          fallback={<Server className="size-3.5 text-primary" />}
+                        />
                       </div>
+
 
                       {/* Name & Type */}
                       <div className="min-w-0 flex-1">
@@ -846,15 +805,9 @@ const VpnPage: React.FC = () => {
           {/* Top Bar: Mode Selector & TUN Switch */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border/30">
             <div>
-              <h1 className="text-base font-bold tracking-tight text-foreground flex items-center gap-2">
+              <h1 className="text-base font-bold tracking-tight text-foreground">
                 GhosterNet Universal VPN
-                <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/50 bg-muted/40 text-muted-foreground font-mono font-normal">
-                  sing-box v1.14 • Wintun
-                </span>
               </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {activeModeObj.subtitle}
-              </p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -1013,13 +966,15 @@ const VpnPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Active Server HUD Pill (Photo 1 style) */}
+            {/* Active Server HUD Pill */}
             {activeServer ? (
               <div className="mt-4 px-4 py-2 rounded-2xl border border-border/40 bg-card/60 backdrop-blur-md flex items-center gap-3 shadow-xs">
-                <div className="size-11 rounded-2xl bg-card/70 border border-border/50 flex items-center justify-center shrink-0 select-none text-2xl shadow-sm">
-                  {getCountryFlag(activeServer.countryCode) || (
-                    <Server className="size-5 text-primary" />
-                  )}
+                <div className="size-11 rounded-2xl bg-card/70 border border-border/50 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+                  <CountryFlag
+                    code={activeServer.countryCode || detectCountryCode(activeServer.name)}
+                    className="w-7 h-5 rounded-[3px]"
+                    fallback={<Server className="size-5 text-primary" />}
+                  />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -1060,49 +1015,10 @@ const VpnPage: React.FC = () => {
             )}
           </div>
 
-          {/* Real-time Neon Speed Cards (Photo 1 style) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
-            {/* Download Speed */}
-            <div className="p-3.5 rounded-xl border border-border/40 bg-card/50 backdrop-blur-md flex items-center justify-between gap-3 shadow-xs">
-              <div className="flex items-center gap-3">
-                <div className="size-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
-                  <ArrowDown className="size-5" />
-                </div>
-                <div>
-                  <div className="text-[11px] text-muted-foreground uppercase font-medium tracking-wide">
-                    Входящая скорость
-                  </div>
-                  <div className="text-lg font-bold font-mono text-cyan-400 tabular-nums">
-                    {formatSpeed(speeds.down)}
-                  </div>
-                </div>
-              </div>
-              <Activity className={cn('size-5 text-cyan-400/40', isConnected && 'animate-pulse')} />
-            </div>
-
-            {/* Upload Speed */}
-            <div className="p-3.5 rounded-xl border border-border/40 bg-card/50 backdrop-blur-md flex items-center justify-between gap-3 shadow-xs">
-              <div className="flex items-center gap-3">
-                <div className="size-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                  <ArrowUp className="size-5" />
-                </div>
-                <div>
-                  <div className="text-[11px] text-muted-foreground uppercase font-medium tracking-wide">
-                    Исходящая скорость
-                  </div>
-                  <div className="text-lg font-bold font-mono text-emerald-400 tabular-nums">
-                    {formatSpeed(speeds.up)}
-                  </div>
-                </div>
-              </div>
-              <Activity className={cn('size-5 text-emerald-400/40', isConnected && 'animate-pulse')} />
-            </div>
-          </div>
-
-          {/* Bottom Action Bar: Ping Test & Local Ports (Happ Photo 2 style) */}
-          <div className="mt-4 pt-4 border-t border-border/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Bottom Action Bar: Ping Test & Restart */}
+          <div className="mt-4 pt-4 border-t border-border/30 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              {/* Test Ping Button (Prominent pill like Happ) */}
+              {/* Test Ping Button */}
               <Button
                 variant="default"
                 size="sm"
@@ -1133,18 +1049,6 @@ const VpnPage: React.FC = () => {
                   <span>Перезапустить</span>
                 </Button>
               )}
-            </div>
-
-            {/* Local Proxy Ports Info */}
-            <div className="flex items-center gap-3 text-[11px] text-muted-foreground font-mono">
-              <span className="flex items-center gap-1">
-                <Laptop className="size-3 text-primary" />
-                HTTP: <span className="text-foreground">{vpnStatus.localHttpPort || 2080}</span>
-              </span>
-              <span>•</span>
-              <span>
-                SOCKS5: <span className="text-foreground">{vpnStatus.localSocksPort || 2081}</span>
-              </span>
             </div>
           </div>
         </div>

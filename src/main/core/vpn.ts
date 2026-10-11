@@ -4,7 +4,7 @@ import path from 'path'
 import readline from 'readline'
 import net from 'net'
 import { BrowserWindow } from 'electron'
-import { vpnBinaryPath, vpnRuntimeDir, wintunDllPath, wireproxyBinaryPath } from '../utils/dirs'
+import { vpnBinaryPath, vpnRulesDir, vpnRuntimeDir, wintunDllPath, wireproxyBinaryPath } from '../utils/dirs'
 import { getAppConfig, patchAppConfig } from '../config'
 import { buildSingBoxConfig, buildWireproxyConfig } from './vpn-config'
 import { parseVpnInput, ParseResult } from './vpn-parser'
@@ -186,6 +186,29 @@ export async function startVpn(): Promise<void> {
     }
   }
 
+  // Ensure local rule sets are available in runDir/rules
+  const bundledRules = vpnRulesDir()
+  const targetRulesDir = path.join(runDir, 'rules')
+  if (!existsSync(targetRulesDir)) {
+    try {
+      mkdirSync(targetRulesDir, { recursive: true })
+    } catch {
+      // ignore
+    }
+  }
+  for (const file of ['geosite-ru.srs', 'geoip-ru.srs']) {
+    const src = path.join(bundledRules, file)
+    const dst = path.join(targetRulesDir, file)
+    if (existsSync(src) && !existsSync(dst)) {
+      try {
+        copyFileSync(src, dst)
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+
   const singBoxConfig = buildSingBoxConfig({
     server: selectedServer,
     tunMode: vpnCfg.tunMode ?? true,
@@ -249,7 +272,15 @@ export async function startVpn(): Promise<void> {
     const handleLine = (line: string): void => {
       const trimmed = line.trim()
       if (!trimmed) return
-      log('debug', `[sing-box] ${trimmed}`)
+
+      if (trimmed.includes('FATAL') || trimmed.includes('fatal')) {
+        log('error', `[sing-box] ${trimmed}`)
+        setStatus({ lastError: trimmed })
+      } else if (trimmed.includes('WARN') || trimmed.includes('warn')) {
+        log('warn', `[sing-box] ${trimmed}`)
+      } else {
+        log('debug', `[sing-box] ${trimmed}`)
+      }
 
       // Sing-box startup detection
       if (
@@ -292,7 +323,8 @@ export async function startVpn(): Promise<void> {
         setStatus({ state: 'stopped', pid: undefined, startedAt: undefined })
         log('info', 'VPN остановлен')
       } else {
-        const msg = `VPN отключен (код: ${code ?? 'none'}, сигнал: ${signal ?? 'none'})`
+        const errorDetail = status.lastError ? ` — ${status.lastError}` : ''
+        const msg = `VPN отключен (код: ${code ?? 'none'}, сигнал: ${signal ?? 'none'})${errorDetail}`
         log('warn', msg)
         setStatus({ state: 'stopped', pid: undefined, startedAt: undefined, lastError: msg })
       }

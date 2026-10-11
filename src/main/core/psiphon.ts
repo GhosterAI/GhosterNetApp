@@ -18,6 +18,7 @@ let status: PsiphonStatus = {
 }
 let stopRequested = false
 let systemProxyApplied = false
+let connectTimeoutTimer: NodeJS.Timeout | null = null
 
 function broadcast(channel: string, ...args: unknown[]): void {
   for (const w of BrowserWindow.getAllWindows()) {
@@ -92,6 +93,11 @@ export async function startPsiphon(): Promise<void> {
     mkdirSync(dataDir, { recursive: true })
   }
 
+  if (connectTimeoutTimer) {
+    clearTimeout(connectTimeoutTimer)
+    connectTimeoutTimer = null
+  }
+
   const httpPort = pCfg.httpPort || 20807
   const socksPort = pCfg.socksPort || 20808
   const egressRegion = pCfg.egressRegion || ''
@@ -100,10 +106,14 @@ export async function startPsiphon(): Promise<void> {
     PropagationChannelId: 'FFFFFFFFFFFFFFFF',
     SponsorId: 'FFFFFFFFFFFFFFFF',
     RemoteServerListUrl:
-      'https://s3.amazonaws.com//psiphon/web/mjr4-p23r-puwl/server_list_compressed',
+      'https://s3.amazonaws.com/psiphon/web/mjr4-p23r-puwl/server_list_compressed',
+    RemoteServerListURLs: [
+      'https://s3.amazonaws.com/psiphon/web/mjr4-p23r-puwl/server_list_compressed'
+    ],
     RemoteServerListDownloadFilename: 'remote_server_list',
     RemoteServerListSignaturePublicKey:
       'MIICIDANBgkqhkiG9w0BAQEFAAOCAg0AMIICCAKCAgEAt7Ls+/39r+T6zNW7GiVpJfzq/xvL9SBH5rIFnk0RXYEYavax3WS6HOD35eTAqn8AniOwiH+DOkvgSKF2caqk/y1dfq47Pdymtwzp9ikpB1C5OfAysXzBiwVJlCdajBKvBZDerV1cMvRzCKvKwRmvDmHgphQQ7WfXIGbRbmmk6opMBh3roE42KcotLFtqp0RRwLtcBRNtCdsrVsjiI1Lqz/lH+T61sGjSjQ3CHMuZYSQJZo/KrvzgQXpkaCTdbObxHqb6/+i1qaVOfEsvjoiyzTxJADvSytVtcTjijhPEV6XskJVHE1Zgl+7rATr/pDQkw6DPCNBS1+Y6fy7GstZALQXwEDN/qhQI9kWkHijT8ns+i1vGg00Mk/6J75arLhqcodWsdeG/M/moWgqQAnlZAGVtJI1OgeF5fsPpXu4kctOfuZlGjVZXQNW34aOzm8r8S0eVZitPlbhcPiR4gT/aSMz/wd8lZlzZYsje/Jr8u/YtlwjjreZrGRmG8KMOzukV3lLmMppXFMvl4bxv6YFEmIuTsOhbLTwFgh7KYNjodLj/LsqRVfwz31PgWQFTEPICV7GCvgVlPRxnofqKSjgTWI4mxDhBpVcATvaoBl1L/6WLbFvBsoAUBItWwctO2xalKxF5szhGm8lccoc5MZr8kfE0uxMgsxz4er68iCID+rsCAQM=',
+    EstablishTunnelTimeoutSeconds: 30,
     LocalHttpProxyPort: httpPort,
     LocalSocksProxyPort: socksPort,
     ...(egressRegion ? { EgressRegion: egressRegion } : {}),
@@ -122,6 +132,19 @@ export async function startPsiphon(): Promise<void> {
     const pid = child.pid
     setStatus({ pid, httpPort, socksPort, systemProxy: Boolean(pCfg.systemProxy) })
 
+    // Watchdog timer: cancel if tunnel hasn't connected in 45s
+    connectTimeoutTimer = setTimeout(() => {
+      if (status.state === 'starting') {
+        const msg = 'Превышено время ожидания подключения к серверам Psiphon (45 сек)'
+        log(
+          'warn',
+          `Psiphon: ${msg}. Серверы могут быть заблокированы провайдером. Рекомендуется использовать обычный VPN (VLESS/Shadowsocks) или изменить регион выхода.`
+        )
+        setStatus({ state: 'error', lastError: msg })
+        void stopPsiphon()
+      }
+    }, 45000)
+
     const handleLine = (line: string): void => {
       const trimmed = line.trim()
       if (!trimmed) return
@@ -137,6 +160,7 @@ export async function startPsiphon(): Promise<void> {
             const port = Number(obj.data?.port) || httpPort
             setStatus({ httpPort: port })
             log('info', `HTTP-прокси слушает на 127.0.0.1:${port}`)
+            log('info', 'Psiphon: поиск и перебор доступных узлов сети (может занять 15–30 сек)…')
             break
           }
           case 'ListeningSocksProxyPort': {
@@ -149,38 +173,70 @@ export async function startPsiphon(): Promise<void> {
             const regions = (obj.data?.regions as string[]) || []
             if (regions.length > 0) {
               setStatus({ availableRegions: regions })
+              log('info', `Psiphon: доступно ${regions.length} регионов выхода`)
             }
             break
           }
           case 'ConnectedServerRegion': {
-            const region = String(obj.data?.region || '')
+            const region = String(obj.data?.serverRegion || obj.data?.region || '')
             setStatus({ connectedRegion: region })
-            log('info', `Подключено к региону: ${region || 'Авто'}`)
+            log('info', `Подключено к региону Psiphon: ${region || 'Авто'}`)
             break
           }
-          case 'Tunnels': {
-            const count = Number(obj.data?.count) || 0
-            if (count > 0 && status.state !== 'running') {
-              setStatus({ state: 'running', startedAt: Date.now() })
-              log('info', 'Psiphon туннель успешно установлен!')
-              if (pCfg.systemProxy) {
-                const vpnStatus = getVpnStatus()
-                if (vpnStatus.state === 'running' && vpnStatus.tunMode) {
-                  log('warn', 'VPN активен в режиме TUN — системный прокси не применен во избежание конфликта.')
-                } else {
-                  void setWindowsSystemProxy('127.0.0.1', httpPort)
-                  systemProxyApplied = true
-                  log('info', `Системный прокси Windows активирован (127.0.0.1:${httpPort})`)
-                }
-              }
+          case 'ApplicationParameters': {
+            if (status.state === 'starting') {
+              log('info', 'Psiphon: параметры сети согласованы, подключение к туннелю…')
             }
             break
           }
           case 'EstablishTunnelTimeout': {
-            log('warn', 'Таймаут подключения Psiphon к узлам сети')
+            log('warn', 'Psiphon: текущий узел не ответил вовремя, проверка следующего кандидата…')
+            break
+          }
+          case 'UpstreamProxyError': {
+            const errMsg = String(obj.data?.message || 'ошибка соединения')
+            log('error', `Psiphon ошибка соединения: ${errMsg}`)
+            break
+          }
+          case 'ServerAlert': {
+            const reason = String(obj.data?.reason || obj.data?.subject || '')
+            if (reason) log('warn', `Psiphon: ${reason}`)
+            break
+          }
+          case 'Tunnels': {
+            const count = Number(obj.data?.count) || 0
+            if (count > 0) {
+              if (connectTimeoutTimer) {
+                clearTimeout(connectTimeoutTimer)
+                connectTimeoutTimer = null
+              }
+              if (status.state !== 'running') {
+                setStatus({ state: 'running', startedAt: Date.now() })
+                log('info', 'Psiphon: зашифрованный туннель успешно установлен!')
+                if (pCfg.systemProxy) {
+                  const vpnStatus = getVpnStatus()
+                  if (vpnStatus.state === 'running' && vpnStatus.tunMode) {
+                    log(
+                      'warn',
+                      'VPN активен в режиме TUN — системный прокси Psiphon не применен во избежание конфликта.'
+                    )
+                  } else {
+                    void setWindowsSystemProxy('127.0.0.1', httpPort)
+                    systemProxyApplied = true
+                    log('info', `Системный прокси Windows активирован (127.0.0.1:${httpPort})`)
+                  }
+                }
+              }
+            } else if (count === 0 && status.state === 'running') {
+              log('warn', 'Psiphon: соединение разорвано, переподключение…')
+              setStatus({ state: 'starting' })
+            }
             break
           }
           default:
+            if (obj.noticeType) {
+              log('debug', `[psiphon notice] ${obj.noticeType}`)
+            }
             break
         }
       } catch {
@@ -201,11 +257,19 @@ export async function startPsiphon(): Promise<void> {
     }
 
     child.on('error', (err) => {
+      if (connectTimeoutTimer) {
+        clearTimeout(connectTimeoutTimer)
+        connectTimeoutTimer = null
+      }
       log('error', `Ошибка процесса Psiphon: ${err.message}`)
       setStatus({ state: 'error', lastError: err.message })
     })
 
     child.on('exit', (code, signal) => {
+      if (connectTimeoutTimer) {
+        clearTimeout(connectTimeoutTimer)
+        connectTimeoutTimer = null
+      }
       if (systemProxyApplied) {
         void disableWindowsSystemProxy()
         systemProxyApplied = false
@@ -220,6 +284,7 @@ export async function startPsiphon(): Promise<void> {
         setStatus({ state: 'stopped', pid: undefined, lastError: msg })
       }
     })
+
 
     // Update config persistence
     await patchAppConfig({
@@ -236,6 +301,10 @@ export async function startPsiphon(): Promise<void> {
 }
 
 export async function stopPsiphon(): Promise<void> {
+  if (connectTimeoutTimer) {
+    clearTimeout(connectTimeoutTimer)
+    connectTimeoutTimer = null
+  }
   if (status.state === 'stopped') return
   stopRequested = true
   setStatus({ state: 'stopping' })

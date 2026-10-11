@@ -1,3 +1,7 @@
+import path from 'path'
+import { existsSync } from 'fs'
+import { vpnRulesDir, vpnRuntimeDir } from '../utils/dirs'
+
 /**
  * Sing-box v1.10+ JSON configuration builder
  */
@@ -219,6 +223,9 @@ export interface BuildSingBoxConfigOptions {
 }
 
 const RU_DOMAIN_SUFFIXES = [
+  'ru',
+  'su',
+  'xn--p1ai',
   '.ru',
   '.su',
   '.xn--p1ai',
@@ -241,8 +248,14 @@ const RU_DOMAIN_SUFFIXES = [
   'dzen.ru',
   'kion.ru',
   'ivi.ru',
-  '2gis.ru'
+  '2gis.ru',
+  'mos.ru',
+  'spb.ru',
+  'livejournal.com',
+  'habr.com',
+  'pikabu.ru'
 ]
+
 
 export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<string, unknown> {
   const { server, tunMode, routingMode, localHttpPort, localSocksPort } = opts
@@ -307,15 +320,32 @@ export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<stri
     }
   ]
 
+  const rulesDir = vpnRulesDir()
+  const rtRulesDir = path.join(vpnRuntimeDir(), 'rules')
+  const geositeCandidate = existsSync(path.join(rtRulesDir, 'geosite-ru.srs'))
+    ? path.join(rtRulesDir, 'geosite-ru.srs')
+    : path.join(rulesDir, 'geosite-ru.srs')
+  const geoipCandidate = existsSync(path.join(rtRulesDir, 'geoip-ru.srs'))
+    ? path.join(rtRulesDir, 'geoip-ru.srs')
+    : path.join(rulesDir, 'geoip-ru.srs')
+
+  const hasGeosite = existsSync(geositeCandidate)
+  const hasGeoip = existsSync(geoipCandidate)
+
   if (routingMode === 'bypass-ru') {
     rules.push({
       outbound: 'direct',
       domain_suffix: RU_DOMAIN_SUFFIXES
     })
-    rules.push({
-      outbound: 'direct',
-      rule_set: ['geosite-ru', 'geoip-ru']
-    })
+    const activeRuleSets: string[] = []
+    if (hasGeosite) activeRuleSets.push('geosite-ru')
+    if (hasGeoip) activeRuleSets.push('geoip-ru')
+    if (activeRuleSets.length > 0) {
+      rules.push({
+        outbound: 'direct',
+        rule_set: activeRuleSets
+      })
+    }
   }
 
   const dnsServers: Array<Record<string, unknown>> = [
@@ -323,13 +353,13 @@ export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<stri
       tag: 'remote-dns',
       type: 'https',
       server: '1.1.1.1',
-      domain_resolver: 'direct-dns'
+      domain_resolver: 'direct-dns',
+      detour: 'proxy'
     },
     {
       tag: 'direct-dns',
       type: 'udp',
-      server: '77.88.8.8',
-      detour: 'direct'
+      server: '77.88.8.8'
     }
   ]
 
@@ -340,10 +370,12 @@ export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<stri
       domain_suffix: RU_DOMAIN_SUFFIXES,
       server: 'direct-dns'
     })
-    dnsRules.push({
-      rule_set: ['geosite-ru'],
-      server: 'direct-dns'
-    })
+    if (hasGeosite) {
+      dnsRules.push({
+        rule_set: ['geosite-ru'],
+        server: 'direct-dns'
+      })
+    }
   }
 
   const routeObj: Record<string, unknown> = {
@@ -354,23 +386,28 @@ export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<stri
   }
 
   if (routingMode === 'bypass-ru') {
-    routeObj.rule_set = [
-      {
+    const localRuleSets: Array<Record<string, unknown>> = []
+    if (hasGeosite) {
+      localRuleSets.push({
         tag: 'geosite-ru',
-        type: 'remote',
+        type: 'local',
         format: 'binary',
-        url: 'https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-ru.srs',
-        download_detour: 'direct'
-      },
-      {
+        path: geositeCandidate
+      })
+    }
+    if (hasGeoip) {
+      localRuleSets.push({
         tag: 'geoip-ru',
-        type: 'remote',
+        type: 'local',
         format: 'binary',
-        url: 'https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-ru.srs',
-        download_detour: 'direct'
-      }
-    ]
+        path: geoipCandidate
+      })
+    }
+    if (localRuleSets.length > 0) {
+      routeObj.rule_set = localRuleSets
+    }
   }
+
 
   return {
     log: {

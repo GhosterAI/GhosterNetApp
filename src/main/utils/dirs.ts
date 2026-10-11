@@ -181,6 +181,12 @@ export function wintunDllPath(): string {
   return path.join(resourcesDir(), 'vpn', 'wintun.dll')
 }
 
+export function vpnRulesDir(): string {
+  const rt = path.join(vpnRuntimeDir(), 'rules')
+  if (existsSync(rt)) return rt
+  return path.join(resourcesDir(), 'vpn', 'rules')
+}
+
 export function wireproxyBinaryPath(): string {
   const rt = path.join(vpnRuntimeDir(), 'wireproxy.exe')
   if (existsSync(rt)) return rt
