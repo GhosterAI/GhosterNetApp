@@ -42,7 +42,7 @@ export async function exportFullConfig(): Promise<string> {
 
   const payload: GhosterNetBackup = {
     format: 'ghosternet-backup',
-    version: '2.2.0',
+    version: '2.3.0',
     appVersion: app.getVersion(),
     exportedAt: Date.now(),
     config,
