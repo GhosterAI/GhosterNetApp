@@ -8,27 +8,34 @@ import path from 'path'
  * Country flag emoji / ISO code detection from server label
  */
 const COUNTRY_PATTERNS: Array<{ code: string; regex: RegExp }> = [
-  { code: 'NL', regex: /(?:🇳🇱|\bNL\b|netherlands|нидерланд|амстердам|amsterdam)/i },
-  { code: 'DE', regex: /(?:🇩🇪|\bDE\b|germany|германи|франкфурт|frankfurt|берлин|berlin)/i },
-  { code: 'US', regex: /(?:🇺🇸|\bUS\b|\bUSA\b|united states|сша|америк|нью-йорк|new york|лонг|вашингтон)/i },
-  { code: 'FI', regex: /(?:🇫🇮|\bFI\b|finland|финлянди|хельсинки|helsinki)/i },
-  { code: 'SE', regex: /(?:🇸🇪|\bSE\b|sweden|швеци|стокгольм|stockholm)/i },
-  { code: 'GB', regex: /(?:🇬🇧|\bGB\b|\bUK\b|united kingdom|london|лондон|великобритан|англи)/i },
-  { code: 'FR', regex: /(?:🇫🇷|\bFR\b|france|франци|париж|paris)/i },
-  { code: 'PL', regex: /(?:🇵🇱|\bPL\b|poland|польш|варшав|warsaw)/i },
-  { code: 'KZ', regex: /(?:🇰🇿|\bKZ\b|kazakhstan|казахстан|алмат|астан)/i },
-  { code: 'TR', regex: /(?:🇹🇷|\bTR\b|turkey|турци|стамбул|istanbul)/i },
-  { code: 'RU', regex: /(?:🇷🇺|\bRU\b|russia|росси|москв|moscow|питер|spb)/i },
-  { code: 'SG', regex: /(?:🇸🇬|\bSG\b|singapore|сингапур)/i },
-  { code: 'JP', regex: /(?:🇯🇵|\bJP\b|japan|япони|токио|tokyo)/i },
-  { code: 'CH', regex: /(?:🇨🇭|\bCH\b|switzerland|швейцари|цюрих)/i },
-  { code: 'AT', regex: /(?:🇦🇹|\bAT\b|austria|австри|вена)/i },
-  { code: 'CZ', regex: /(?:🇨🇿|\bCZ\b|czech|чехи|прага)/i },
-  { code: 'ES', regex: /(?:🇪🇸|\bES\b|spain|испани|мадрид|барселон)/i },
-  { code: 'IT', regex: /(?:🇮🇹|\bIT\b|italy|итали|рим|милан)/i },
-  { code: 'CA', regex: /(?:🇨🇦|\bCA\b|canada|канада|торонто)/i },
-  { code: 'UA', regex: /(?:🇺🇦|\bUA\b|ukraine|украин|киев)/i }
+  { code: 'NL', regex: /(?:\uD83C\uDDF3\uD83C\uDDF1|\bNL\b|netherlands|нидерланд|амстердам|amsterdam)/i },
+  { code: 'DE', regex: /(?:\uD83C\uDDE9\uD83C\uDDEA|\bDE\b|germany|германи|франкфурт|frankfurt|берлин|berlin)/i },
+  { code: 'US', regex: /(?:\uD83C\uDDFA\uD83C\uDDF8|\bUS\b|\bUSA\b|united states|сша|америк|нью-йорк|new york|лонг|вашингтон)/i },
+  { code: 'FI', regex: /(?:\uD83C\uDDEB\uD83C\uDDEE|\bFI\b|finland|финлянди|хельсинки|helsinki)/i },
+  { code: 'SE', regex: /(?:\uD83C\uDDF8\uD83C\uDDEA|\bSE\b|sweden|швеци|стокгольм|stockholm)/i },
+  { code: 'GB', regex: /(?:\uD83C\uDDEC\uD83C\uDDE7|\bGB\b|\bUK\b|united kingdom|london|лондон|великобритан|англи)/i },
+  { code: 'FR', regex: /(?:\uD83C\uDDEB\uD83C\uDDF7|\bFR\b|france|франци|париж|paris)/i },
+  { code: 'PL', regex: /(?:\uD83C\uDDF5\uD83C\uDDF1|\bPL\b|poland|польш|варшав|warsaw)/i },
+  { code: 'KZ', regex: /(?:\uD83C\uDDF0\uD83C\uDDFF|\bKZ\b|kazakhstan|казахстан|алмат|астан)/i },
+  { code: 'TR', regex: /(?:\uD83C\uDDF9\uD83C\uDDF7|\bTR\b|turkey|турци|стамбул|istanbul)/i },
+  { code: 'RU', regex: /(?:\uD83C\uDDF7\uD83C\uDDFA|\bRU\b|russia|росси|москв|moscow|питер|spb)/i },
+  { code: 'SG', regex: /(?:\uD83C\uDDF8\uD83C\uDDEC|\bSG\b|singapore|сингапур)/i },
+  { code: 'JP', regex: /(?:\uD83C\uDDEF\uD83C\uDDF5|\bJP\b|japan|япони|токио|tokyo)/i },
+  { code: 'CH', regex: /(?:\uD83C\uDDE8\uD83C\uDDED|\bCH\b|switzerland|швейцари|цюрих)/i },
+  { code: 'AT', regex: /(?:\uD83C\uDDE6\uD83C\uDDF9|\bAT\b|austria|австри|вена)/i },
+  { code: 'CZ', regex: /(?:\uD83C\uDDE8\uD83C\uDDFF|\bCZ\b|czech|чехи|прага)/i },
+  { code: 'ES', regex: /(?:\uD83C\uDDEA\uD83C\uDDF8|\bES\b|spain|испани|мадрид|барселон)/i },
+  { code: 'IT', regex: /(?:\uD83C\uDDEE\uD83C\uDDF9|\bIT\b|italy|итали|рим|милан)/i },
+  { code: 'CA', regex: /(?:\uD83C\uDDE8\uD83C\uDDE6|\bCA\b|canada|канада|торонто)/i },
+  { code: 'UA', regex: /(?:\uD83C\uDDFA\uD83C\uDDE6|\bUA\b|ukraine|украин|киев)/i }
 ]
+
+export function stripEmojis(str?: string): string {
+  if (!str) return ''
+  return str
+    .replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|[\u{FE00}-\u{FE0F}]|[\u{1F300}-\u{1F9FF}]|[\u{2B50}-\u{2B55}]|[\u{200D}]|[\u{2300}-\u{23FF}]/gu, '')
+    .trim()
+}
 
 export function detectCountryCode(text: string): string {
   for (const { code, regex } of COUNTRY_PATTERNS) {
@@ -315,13 +322,17 @@ export function parseTuicUri(raw: string): VpnServer | null {
 export function parseSingleVpnUri(line: string): VpnServer | null {
   const trimmed = line.trim()
   if (!trimmed) return null
-  if (trimmed.startsWith('vless://')) return parseVlessUri(trimmed)
-  if (trimmed.startsWith('vmess://')) return parseVmessUri(trimmed)
-  if (trimmed.startsWith('trojan://')) return parseTrojanUri(trimmed)
-  if (trimmed.startsWith('ss://')) return parseShadowsocksUri(trimmed)
-  if (trimmed.startsWith('hysteria2://') || trimmed.startsWith('hy2://')) return parseHysteria2Uri(trimmed)
-  if (trimmed.startsWith('tuic://')) return parseTuicUri(trimmed)
-  return null
+  let s: VpnServer | null = null
+  if (trimmed.startsWith('vless://')) s = parseVlessUri(trimmed)
+  else if (trimmed.startsWith('vmess://')) s = parseVmessUri(trimmed)
+  else if (trimmed.startsWith('trojan://')) s = parseTrojanUri(trimmed)
+  else if (trimmed.startsWith('ss://')) s = parseShadowsocksUri(trimmed)
+  else if (trimmed.startsWith('hysteria2://') || trimmed.startsWith('hy2://')) s = parseHysteria2Uri(trimmed)
+  else if (trimmed.startsWith('tuic://')) s = parseTuicUri(trimmed)
+  if (s) {
+    s.name = stripEmojis(s.name) || s.name
+  }
+  return s
 }
 
 export interface ParseResult {
@@ -606,10 +617,11 @@ export async function parseVpnInput(input: string): Promise<ParseResult> {
 
     // Determine subscription name from headers or URL
     const parsedUrl = new URL(trimmed)
-    const subName =
+    const rawSubName =
       headers['profile-title'] ||
       parsedUrl.searchParams.get('name') ||
       parsedUrl.hostname
+    const subName = stripEmojis(decodeURIComponent(rawSubName)) || parsedUrl.hostname
 
     const subscription: VpnSubscription = {
       id: subId,

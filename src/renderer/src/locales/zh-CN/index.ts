@@ -578,7 +578,7 @@ export default {
     actions: {
       title: '操作',
       confirmReset: '确认删除配置？',
-      resetWarning: '⚠️ 删除配置，',
+      resetWarning: '删除配置，',
       cannotUndo: '操作不可撤销',
       confirmDelete: '确认删除',
       openGuide: '打开引导页面',

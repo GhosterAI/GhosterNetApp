@@ -305,7 +305,7 @@ async function startTgwsImpl(): Promise<void> {
     }
 
     setStatus({ state: 'running', pid: child.pid })
-    log('info', `✓ TgWsProxy запущен (pid=${child.pid})`)
+    log('info', `TgWsProxy запущен (pid=${child.pid})`)
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     log('error', `startup failed: ${msg}`)

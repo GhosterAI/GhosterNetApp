@@ -514,7 +514,7 @@ export default {
     actions: {
       title: 'Actions',
       confirmReset: 'Confirm reset configuration?',
-      resetWarning: '⚠️ Delete configuration, ',
+      resetWarning: 'Delete configuration, ',
       cannotUndo: 'this action cannot be undone',
       confirmDelete: 'Confirm Delete',
       openGuide: 'Open Guide',

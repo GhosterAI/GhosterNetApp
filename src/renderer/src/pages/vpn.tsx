@@ -46,16 +46,11 @@ import {
 import PowerIcon from '@renderer/assets/on_icon.svg'
 import PauseIcon from '@renderer/assets/pause_icon.svg'
 
-function getCountryFlag(code?: string): string {
-  if (!code || code.length !== 2) return '🌐'
-  try {
-    const upper = code.toUpperCase()
-    const first = upper.codePointAt(0)! - 0x41 + 0x1f1e6
-    const second = upper.codePointAt(1)! - 0x41 + 0x1f1e6
-    return String.fromCodePoint(first, second)
-  } catch {
-    return '🌐'
-  }
+function stripEmojis(str?: string): string {
+  if (!str) return ''
+  return str
+    .replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|[\u{FE00}-\u{FE0F}]|[\u{1F300}-\u{1F9FF}]|[\u{2B50}-\u{2B55}]|[\u{200D}]|[\u{2300}-\u{23FF}]/gu, '')
+    .trim()
 }
 
 function formatBytes(bytes?: number): string {
@@ -599,7 +594,7 @@ const VpnPage: React.FC = () => {
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0 flex items-center gap-1.5 truncate">
                           <Globe className="size-3 text-primary shrink-0" />
-                          <span className="font-semibold text-foreground truncate">{sub.name}</span>
+                          <span className="font-semibold text-foreground truncate">{stripEmojis(sub.name) || sub.name}</span>
                           <span className="text-[10px] px-1.5 py-0.2 rounded bg-muted/50 text-muted-foreground font-mono shrink-0">
                             {sub.serverCount ?? 0}
                           </span>
@@ -690,16 +685,16 @@ const VpnPage: React.FC = () => {
                     )}
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      {/* Flag */}
-                      <span className="text-xl select-none shrink-0 drop-shadow-xs">
-                        {getCountryFlag(server.countryCode)}
-                      </span>
+                      {/* Country Code Badge */}
+                      <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-mono text-[10px] font-bold tracking-wider shrink-0 select-none">
+                        {server.countryCode ? server.countryCode.toUpperCase() : <Server className="size-3.5 text-primary" />}
+                      </div>
 
                       {/* Name & Type */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 truncate">
                           <span className="text-xs font-medium text-foreground truncate">
-                            {server.name}
+                            {stripEmojis(server.name) || server.name}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground truncate font-mono mt-0.5">
@@ -1007,13 +1002,13 @@ const VpnPage: React.FC = () => {
             {/* Active Server HUD Pill (Photo 1 style) */}
             {activeServer ? (
               <div className="mt-4 px-4 py-2 rounded-2xl border border-border/40 bg-card/60 backdrop-blur-md flex items-center gap-3 shadow-xs">
-                <span className="text-2xl select-none drop-shadow-sm">
-                  {getCountryFlag(activeServer.countryCode)}
-                </span>
+                <div className="size-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary font-mono text-xs font-bold tracking-wider shrink-0 select-none shadow-xs">
+                  {activeServer.countryCode ? activeServer.countryCode.toUpperCase() : <Server className="size-4 text-primary" />}
+                </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-foreground truncate max-w-[200px]">
-                      {activeServer.name}
+                      {stripEmojis(activeServer.name) || activeServer.name}
                     </span>
                     <span
                       className={cn(

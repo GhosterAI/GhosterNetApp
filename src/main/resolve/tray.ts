@@ -112,7 +112,7 @@ export async function createTray(): Promise<void> {
 
     const activeStrat = cfg?.zapret?.activeStrategy
     const stratItems: Electron.MenuItemConstructorOptions[] = strategies.slice(0, 12).map((s) => ({
-      label: s.favorite ? `★ ${s.title}` : s.title,
+      label: s.favorite ? `* ${s.title}` : s.title,
       type: 'radio' as const,
       checked: s.file === activeStrat,
       click: async () => {

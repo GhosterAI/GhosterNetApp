@@ -41,6 +41,13 @@ interface PowerToggleProps {
   disabledReason?: string
 }
 
+function stripEmojis(str?: string): string {
+  if (!str) return ''
+  return str
+    .replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|[\u{FE00}-\u{FE0F}]|[\u{1F300}-\u{1F9FF}]|[\u{2B50}-\u{2B55}]|[\u{200D}]|[\u{2300}-\u{23FF}]/gu, '')
+    .trim()
+}
+
 const PowerToggle: React.FC<PowerToggleProps> = ({
   label, status, onToggle, version, disabled = false, disabledReason
 }) => {
@@ -469,7 +476,7 @@ const Home: React.FC = () => {
             onToggle={toggleVpn}
             version={
               vpn.activeServer
-                ? `${vpn.activeServer.name}`
+                ? `${stripEmojis(vpn.activeServer.name) || vpn.activeServer.name}`
                 : appConfig?.vpn?.servers?.length
                   ? `${appConfig.vpn.servers.length} серв.`
                   : 'sing-box'
@@ -501,7 +508,7 @@ const Home: React.FC = () => {
                   psiphon.systemProxy ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {psiphon.systemProxy ? '✓ Системный прокси (Вся система)' : 'Только локальный прокси'}
+                {psiphon.systemProxy ? 'Системный прокси (Вся система)' : 'Только локальный прокси'}
               </button>
               <span className="h-3 w-px bg-border/40" />
               <span className="font-mono text-[11px] text-muted-foreground">
@@ -518,7 +525,7 @@ const Home: React.FC = () => {
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <ShieldCheck className="size-3.5 text-primary" />
                 <span className="font-medium text-foreground">
-                  VPN: {vpn.activeServer?.name || 'Активен'}
+                  VPN: {stripEmojis(vpn.activeServer?.name) || vpn.activeServer?.name || 'Активен'}
                 </span>
               </span>
               <span className="h-3 w-px bg-border/40" />

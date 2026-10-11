@@ -513,7 +513,7 @@ export default {
     actions: {
       title: 'Действия',
       confirmReset: 'Подтвердить сброс конфигурации?',
-      resetWarning: '⚠️ Удалить конфигурацию, ',
+      resetWarning: 'Удалить конфигурацию, ',
       cannotUndo: 'это действие нельзя отменить',
       confirmDelete: 'Подтвердить удаление',
       openGuide: 'Открыть руководство',
