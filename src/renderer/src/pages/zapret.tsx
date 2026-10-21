@@ -31,9 +31,11 @@ import {
   zapretRunStrategyTest,
   zapretCancelStrategyTest,
   zapretRunSettingsBenchmark,
+  discordFixVoice,
   type ZapretUpdateInfo,
   type StrategyDescriptor
 } from '@renderer/utils/ipc'
+import { Volume2, ShieldAlert } from 'lucide-react'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
 import { Button } from '@renderer/components/ui/button'
@@ -494,6 +496,61 @@ const Zapret: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Auto-Failover & Discord Voice & Video Fixer */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="flex items-center justify-between rounded-md border border-border p-2.5 bg-primary/5 border-primary/20">
+                <div className="pr-2">
+                  <div className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                    <ShieldAlert className="size-3.5" />
+                    Авто-переключение стратегий (Auto-Failover)
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    Автоматически переключает стратегию при обнаружении блокировки провайдером
+                  </div>
+                </div>
+                <Switch
+                  checked={zapret?.autoFailover ?? true}
+                  onCheckedChange={(v) => void patchZapretField({ autoFailover: v })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border border-border p-2.5 bg-purple-500/5 border-purple-500/20">
+                <div className="pr-2">
+                  <div className="text-xs font-semibold text-purple-400 flex items-center gap-1.5">
+                    <Volume2 className="size-3.5" />
+                    Discord Voice & Video Fixer
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    Оптимизация UDP 50000-50100 для чистого звука без задержек в Discord
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={zapret?.discordVoiceFix ?? true}
+                    onCheckedChange={(v) => void patchZapretField({ discordVoiceFix: v })}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-[11px] px-2 border-purple-500/30 text-purple-300 hover:bg-purple-500/15"
+                    onClick={async () => {
+                      try {
+                        const res = await discordFixVoice()
+                        toast.success('Профиль Discord Voice применён!', {
+                          description: `Очищен кэш (${res.freedMb} МБ), активирован WebRTC десинк`
+                        })
+                        mutateAppConfig()
+                      } catch (e) {
+                        toast.error('Ошибка применения профиля', { description: String(e) })
+                      }
+                    }}
+                  >
+                    Применить фикс
+                  </Button>
+                </div>
+              </div>
+            </div>
 
             {/* QUIC Block & VPN Coexistence */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">

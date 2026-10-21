@@ -699,7 +699,10 @@ export async function checkDnsAiServices(): Promise<DnsAiServiceCheckResult[]> {
     { name: 'Google Gemini', domain: 'gemini.google.com' },
     { name: 'Google AI Studio', domain: 'aistudio.google.com' },
     { name: 'ChatGPT', domain: 'chatgpt.com' },
-    { name: 'Claude AI', domain: 'claude.ai' }
+    { name: 'Claude AI', domain: 'claude.ai' },
+    { name: 'Perplexity AI', domain: 'www.perplexity.ai' },
+    { name: 'DeepSeek', domain: 'chat.deepseek.com' },
+    { name: 'Microsoft Copilot', domain: 'copilot.microsoft.com' }
   ]
 
   const results: DnsAiServiceCheckResult[] = []

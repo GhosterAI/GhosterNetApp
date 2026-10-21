@@ -643,6 +643,39 @@ export const vpnSetRoutingMode = (mode: VpnRoutingMode): Promise<void> =>
   invoke('vpn:setRoutingMode', mode)
 export const vpnSetTunMode = (enabled: boolean): Promise<void> =>
   invoke('vpn:setTunMode', enabled)
+export const vpnSetProcessRouting = (
+  mode: ProcessRoutingMode,
+  list: string[]
+): Promise<void> => invoke('vpn:setProcessRouting', mode, list)
+
+// ---- Cloudflare WARP --------------------------------------------------------
+export const warpGenerate = (): Promise<VpnServer> => invoke('warp:generate')
+
+// ---- Speedtest --------------------------------------------------------------
+export interface SpeedtestProgress {
+  phase: 'ping' | 'download' | 'upload' | 'done' | 'error'
+  pingMs?: number
+  jitterMs?: number
+  currentSpeedMbps?: number
+  progressPercent?: number
+  result?: SpeedtestResult
+  error?: string
+}
+export const speedtestRun = (): Promise<SpeedtestResult> => invoke('speedtest:run')
+
+// ---- Discord Voice & Video Fixer --------------------------------------------
+export interface DiscordVoiceFixResult {
+  ok: boolean
+  freedMb: number
+  actions: string[]
+}
+export const discordFixVoice = (): Promise<DiscordVoiceFixResult> =>
+  invoke('discord:fixVoice')
+
+// ---- Zapret Auto-Failover ---------------------------------------------------
+export const zapretFailoverSwitch = (): Promise<string | null> =>
+  invoke('zapret:failoverSwitch')
+
 
 // ---- App control ------------------------------------------------------------
 export const appQuit = (): Promise<void> => invoke('app:quit')

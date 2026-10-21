@@ -205,7 +205,9 @@ export async function startVpn(): Promise<void> {
     tunMode: vpnCfg.tunMode ?? true,
     routingMode: vpnCfg.routingMode || 'bypass-ru',
     localHttpPort: vpnCfg.localHttpPort || 2080,
-    localSocksPort: vpnCfg.localSocksPort || 2081
+    localSocksPort: vpnCfg.localSocksPort || 2081,
+    processRoutingMode: vpnCfg.processRoutingMode,
+    processList: vpnCfg.processList
   })
 
   const configPath = path.join(runDir, 'config.json')
@@ -549,3 +551,25 @@ export async function setVpnTunMode(enabled: boolean): Promise<void> {
     await restartVpn()
   }
 }
+
+export async function setVpnProcessRouting(
+  mode: ProcessRoutingMode,
+  list: string[]
+): Promise<void> {
+  const cfg = await getAppConfig()
+  if (!cfg.vpn) return
+
+  await patchAppConfig({
+    vpn: {
+      ...cfg.vpn,
+      processRoutingMode: mode,
+      processList: list
+    }
+  })
+  setStatus({ processRoutingMode: mode, processList: list })
+
+  if (status.state === 'running') {
+    await restartVpn()
+  }
+}
+

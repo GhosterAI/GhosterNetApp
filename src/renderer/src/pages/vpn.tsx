@@ -16,7 +16,10 @@ import {
   FileText,
   ChevronDown,
   X,
-  Copy
+  Copy,
+  QrCode,
+  Cloud,
+  Cpu
 } from 'lucide-react'
 import BasePage from '@renderer/components/base/base-page'
 import { Button } from '@renderer/components/ui/button'
@@ -38,8 +41,11 @@ import {
   vpnSelectServer,
   vpnTestLatency,
   vpnSetRoutingMode,
-  vpnSetTunMode
+  vpnSetTunMode,
+  vpnSetProcessRouting,
+  warpGenerate
 } from '@renderer/utils/ipc'
+import { QrExportModal } from '@renderer/components/qr-export-modal'
 import PowerIcon from '@renderer/assets/on_icon.svg'
 import PauseIcon from '@renderer/assets/pause_icon.svg'
 
@@ -93,6 +99,13 @@ const ROUTING_MODES: Array<{
     badge: 'Рекомендуется'
   },
   {
+    id: 'ai-socials',
+    title: 'Только AI и соцсети (Smart Focus)',
+    shortTitle: 'AI и соцсети',
+    subtitle: 'Только Gemini, ChatGPT, Claude, Discord, YouTube через VPN, остальное напрямую',
+    badge: 'Экономия трафика'
+  },
+  {
     id: 'global',
     title: 'Полный туннель (Global)',
     shortTitle: 'Весь трафик',
@@ -133,6 +146,11 @@ const VpnPage: React.FC = () => {
   const [inputUrl, setInputUrl] = useState('')
   const [showManualInput, setShowManualInput] = useState(false)
   const [addingSub, setAddingSub] = useState(false)
+  const [generatingWarp, setGeneratingWarp] = useState(false)
+  const [qrServer, setQrServer] = useState<VpnServer | null>(null)
+  const [showProcessRouting, setShowProcessRouting] = useState(false)
+  const [processMode, setProcessMode] = useState<ProcessRoutingMode>(vpnCfg?.processRoutingMode ?? 'all')
+  const [processListText, setProcessListText] = useState((vpnCfg?.processList ?? ['discord.exe', 'telegram.exe', 'chrome.exe']).join(', '))
   const [refreshingSubId, setRefreshingSubId] = useState<string | null>(null)
   const [searchFilter, setSearchFilter] = useState('')
   const [protocolFilter, setProtocolFilter] = useState('all')
@@ -261,6 +279,42 @@ const VpnPage: React.FC = () => {
       })
     } finally {
       setAddingSub(false)
+    }
+  }
+
+  // 1-Click Cloudflare WARP Generator
+  const handleGenerateWarp = async (): Promise<void> => {
+    setGeneratingWarp(true)
+    try {
+      const server = await warpGenerate()
+      toast.success('Профиль Cloudflare WARP успешно сгенерирован!', {
+        description: `Добавлен WireGuard сервер: ${server.server}`
+      })
+      mutateAppConfig()
+    } catch (e) {
+      toast.error('Не удалось сгенерировать Cloudflare WARP', {
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setGeneratingWarp(false)
+    }
+  }
+
+  // Save Process-Based Routing
+  const handleSaveProcessRouting = async (): Promise<void> => {
+    const list = processListText
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+    try {
+      await vpnSetProcessRouting(processMode, list)
+      toast.success('Настройки раздельного туннелирования сохранены')
+      setShowProcessRouting(false)
+      mutateAppConfig()
+    } catch (e) {
+      toast.error('Ошибка сохранения раздельного туннелирования', {
+        description: e instanceof Error ? e.message : String(e)
+      })
     }
   }
 
@@ -732,6 +786,19 @@ const VpnPage: React.FC = () => {
                         </span>
                       )}
 
+                      {/* QR export button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setQrServer(server)
+                        }}
+                        className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Показать QR-код для телефона"
+                      >
+                        <QrCode className="size-3.5" />
+                      </button>
+
                       <div
                         className={cn(
                           'size-4 rounded-full border flex items-center justify-center transition-all',
@@ -784,44 +851,143 @@ const VpnPage: React.FC = () => {
             </div>
           )}
 
-          {/* Bottom Action Bar (Happ style: Clipboard + Conf file) */}
-          <div className="p-3 border-t border-border/40 bg-card/60 backdrop-blur-md shrink-0 flex items-center justify-between gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePasteClipboard}
-              disabled={addingSub}
-              className="flex-1 h-9 text-xs gap-1.5 bg-background/40 hover:bg-background/80 border-border/50 rounded-xl"
-              title="Импортировать ссылку подписки или ключи из буфера обмена"
-            >
-              <Clipboard className="size-3.5 text-primary" />
-              <span>Из буфера</span>
-            </Button>
+          {/* Bottom Action Bar (Happ style: Clipboard + Conf file + 1-Click WARP + Process Routing) */}
+          <div className="p-3 border-t border-border/40 bg-card/60 backdrop-blur-md shrink-0 flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePasteClipboard}
+                disabled={addingSub || generatingWarp}
+                className="flex-1 h-8.5 text-xs gap-1.5 bg-background/40 hover:bg-background/80 border-border/50 rounded-xl"
+                title="Импортировать ссылку подписки или ключи из буфера обмена"
+              >
+                <Clipboard className="size-3.5 text-primary" />
+                <span>Из буфера</span>
+              </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={addingSub}
-              className="flex-1 h-9 text-xs gap-1.5 bg-background/40 hover:bg-background/80 border-border/50 rounded-xl"
-              title="Импортировать файл конфигурации AmneziaWG / WireGuard (.conf)"
-            >
-              <FileText className="size-3.5 text-purple-400" />
-              <span>Файл .conf</span>
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={addingSub || generatingWarp}
+                className="flex-1 h-8.5 text-xs gap-1.5 bg-background/40 hover:bg-background/80 border-border/50 rounded-xl"
+                title="Импортировать файл конфигурации AmneziaWG / WireGuard (.conf)"
+              >
+                <FileText className="size-3.5 text-purple-400" />
+                <span>.conf файл</span>
+              </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowManualInput(!showManualInput)}
-              className={cn(
-                'size-9 rounded-xl border border-border/40 shrink-0 text-muted-foreground hover:text-foreground',
-                showManualInput && 'bg-primary/15 text-primary border-primary/40'
-              )}
-              title="Ввести ссылку или ключ вручную"
-            >
-              <Plus className="size-4" />
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowManualInput(!showManualInput)}
+                className={cn(
+                  'size-8.5 rounded-xl border border-border/40 shrink-0 text-muted-foreground hover:text-foreground',
+                  showManualInput && 'bg-primary/15 text-primary border-primary/40'
+                )}
+                title="Ввести ссылку или ключ вручную"
+              >
+                <Plus className="size-4" />
+              </Button>
+            </div>
+
+            {/* Smart Tools Bar: 1-Click WARP + Process Routing */}
+            <div className="flex items-center gap-2 pt-1 border-t border-border/20">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateWarp}
+                disabled={generatingWarp}
+                className="flex-1 h-8 text-[11px] gap-1.5 border-cyan-500/30 text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl"
+                title="Автоматически сгенерировать бесплатный WireGuard конфиг Cloudflare WARP"
+              >
+                <Cloud className={`size-3.5 ${generatingWarp ? 'animate-spin' : ''}`} />
+                <span>{generatingWarp ? 'Генерация…' : '1-Click WARP'}</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowProcessRouting(!showProcessRouting)}
+                className={cn(
+                  'flex-1 h-8 text-[11px] gap-1.5 border-border/40 text-muted-foreground hover:text-foreground rounded-xl',
+                  showProcessRouting && 'bg-primary/15 text-primary border-primary/40'
+                )}
+                title="Настроить раздельное туннелирование по приложениям (Process Routing)"
+              >
+                <Cpu className="size-3.5 text-primary" />
+                <span>Туннелирование</span>
+              </Button>
+            </div>
+
+            {/* Expandable Process Routing Panel */}
+            {showProcessRouting && (
+              <div className="p-2.5 rounded-xl border border-border/40 bg-muted/30 text-xs flex flex-col gap-2 animate-in fade-in-0 duration-150">
+                <div className="flex items-center justify-between font-medium">
+                  <span>Туннелирование по приложениям</span>
+                  <X
+                    className="size-3.5 cursor-pointer text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowProcessRouting(false)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setProcessMode('all')}
+                    className={cn(
+                      'px-2 py-1 rounded text-[10px] font-medium border flex-1',
+                      processMode === 'all'
+                        ? 'bg-primary/20 text-primary border-primary/40'
+                        : 'border-border/30 text-muted-foreground'
+                    )}
+                  >
+                    Все (All)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProcessMode('include')}
+                    className={cn(
+                      'px-2 py-1 rounded text-[10px] font-medium border flex-1',
+                      processMode === 'include'
+                        ? 'bg-primary/20 text-primary border-primary/40'
+                        : 'border-border/30 text-muted-foreground'
+                    )}
+                  >
+                    Только эти
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProcessMode('exclude')}
+                    className={cn(
+                      'px-2 py-1 rounded text-[10px] font-medium border flex-1',
+                      processMode === 'exclude'
+                        ? 'bg-primary/20 text-primary border-primary/40'
+                        : 'border-border/30 text-muted-foreground'
+                    )}
+                  >
+                    Исключить
+                  </button>
+                </div>
+                {processMode !== 'all' && (
+                  <div className="flex flex-col gap-1.5">
+                    <Input
+                      value={processListText}
+                      onChange={(e) => setProcessListText(e.target.value)}
+                      placeholder="discord.exe, telegram.exe, chrome.exe"
+                      className="h-7 text-[11px] bg-background/50 border-border/40 font-mono"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleSaveProcessRouting}
+                      className="h-7 text-xs bg-primary text-primary-foreground font-medium"
+                    >
+                      Сохранить правила
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1062,6 +1228,13 @@ const VpnPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* QR Code Export Modal */}
+      <QrExportModal
+        open={qrServer !== null}
+        onClose={() => setQrServer(null)}
+        server={qrServer}
+      />
     </BasePage>
   )
 }

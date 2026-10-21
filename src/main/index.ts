@@ -12,6 +12,8 @@ import { initShortcut } from './resolve/shortcut'
 import { getTgwsStatus, restartTgws, startTgws, stopTgws } from './core/tgws'
 import { getZapretStatus, restartZapret, startZapret, stopZapret } from './core/zapret'
 import { getVpnStatus, restartVpn, startVpn, stopVpn } from './core/vpn'
+import { startZapretFailoverWatcher, stopZapretFailoverWatcher } from './core/zapret-failover'
+import { startTrafficMonitor, stopTrafficMonitor } from './core/traffic-monitor'
 import { appLog } from './utils/app-logger'
 import { enableAutoRun, disableAutoRun } from './sys/autoRun'
 import { isRunningAsAdmin } from './utils/elevation'
@@ -151,6 +153,10 @@ app.whenReady().then(async () => {
   if (!appConfig.disableTray) uiTasks.push(createTray())
   await Promise.all(uiTasks)
 
+  // Start background services: Auto-failover & Live Traffic monitor
+  startZapretFailoverWatcher()
+  startTrafficMonitor()
+
   app.on('activate', () => {
     showMainWindow()
   })
@@ -184,6 +190,8 @@ function syncKillChildren(): void {
 async function cleanupServices(): Promise<void> {
   if (cleanupRan) return
   cleanupRan = true
+  try { stopZapretFailoverWatcher() } catch { /* noop */ }
+  try { stopTrafficMonitor() } catch { /* noop */ }
   await Promise.race([
     Promise.all([stopTgws(), stopZapret(), stopVpn()]).catch(() => void 0),
     new Promise<void>((r) => setTimeout(r, 3000))

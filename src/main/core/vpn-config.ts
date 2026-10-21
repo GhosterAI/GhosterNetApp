@@ -220,7 +220,36 @@ export interface BuildSingBoxConfigOptions {
   routingMode: VpnRoutingMode
   localHttpPort: number
   localSocksPort: number
+  processRoutingMode?: ProcessRoutingMode
+  processList?: string[]
 }
+
+const AI_SOCIALS_DOMAINS = [
+  'openai.com',
+  'chatgpt.com',
+  'oaistatic.com',
+  'oaiusercontent.com',
+  'anthropic.com',
+  'claude.ai',
+  'gemini.google.com',
+  'aistudio.google.com',
+  'perplexity.ai',
+  'deepseek.com',
+  'copilot.microsoft.com',
+  'discord.com',
+  'discordapp.com',
+  'discord.gg',
+  'youtube.com',
+  'youtu.be',
+  'googlevideo.com',
+  'instagram.com',
+  'cdninstagram.com',
+  'facebook.com',
+  'fbcdn.net',
+  'twitter.com',
+  'x.com',
+  't.co'
+]
 
 const RU_DOMAIN_SUFFIXES = [
   'ru',
@@ -258,7 +287,7 @@ const RU_DOMAIN_SUFFIXES = [
 
 
 export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<string, unknown> {
-  const { server, tunMode, routingMode, localHttpPort, localSocksPort } = opts
+  const { server, tunMode, routingMode, localHttpPort, localSocksPort, processRoutingMode, processList } = opts
   const inbounds: Array<Record<string, unknown>> = []
 
   // Mixed inbound (HTTP + SOCKS5)
@@ -320,6 +349,29 @@ export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<stri
     }
   ]
 
+  // Process-Based Routing (Split Tunneling)
+  if (processRoutingMode && processRoutingMode !== 'all' && processList && processList.length > 0) {
+    const cleanProcesses = processList.map((p) => p.trim()).filter(Boolean)
+    if (cleanProcesses.length > 0) {
+      if (processRoutingMode === 'include') {
+        // Only specified processes go through proxy; everything else direct
+        rules.push({
+          process_name: cleanProcesses,
+          outbound: 'proxy'
+        })
+        rules.push({
+          outbound: 'direct'
+        })
+      } else if (processRoutingMode === 'exclude') {
+        // Specified processes bypass proxy
+        rules.push({
+          process_name: cleanProcesses,
+          outbound: 'direct'
+        })
+      }
+    }
+  }
+
   const rulesDir = vpnRulesDir()
   const rtRulesDir = path.join(vpnRuntimeDir(), 'rules')
   const geositeCandidate = existsSync(path.join(rtRulesDir, 'geosite-ru.srs'))
@@ -332,7 +384,16 @@ export function buildSingBoxConfig(opts: BuildSingBoxConfigOptions): Record<stri
   const hasGeosite = existsSync(geositeCandidate)
   const hasGeoip = existsSync(geoipCandidate)
 
-  if (routingMode === 'bypass-ru') {
+  if (routingMode === 'ai-socials') {
+    // Only route AI domains and blocked socials via proxy; rest goes direct
+    rules.push({
+      outbound: 'proxy',
+      domain_suffix: AI_SOCIALS_DOMAINS
+    })
+    rules.push({
+      outbound: 'direct'
+    })
+  } else if (routingMode === 'bypass-ru') {
     rules.push({
       outbound: 'direct',
       domain_suffix: RU_DOMAIN_SUFFIXES

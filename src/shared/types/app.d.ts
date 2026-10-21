@@ -135,7 +135,33 @@ interface AppConfig {
   vpn?: VpnConfig
 }
 
-type VpnRoutingMode = 'bypass-ru' | 'global' | 'proxy-only'
+type VpnRoutingMode = 'bypass-ru' | 'global' | 'proxy-only' | 'ai-socials'
+type ProcessRoutingMode = 'all' | 'include' | 'exclude'
+
+interface SpeedtestResult {
+  pingMs: number
+  jitterMs: number
+  downloadMbps: number
+  uploadMbps?: number
+  isp?: string
+  serverLocation?: string
+}
+
+interface TrafficStats {
+  downSpeedBps: number
+  upSpeedBps: number
+  totalDownBytes: number
+  totalUpBytes: number
+  activeConnections?: number
+}
+
+interface ZapretFailoverState {
+  enabled: boolean
+  lastSwitchAt?: number
+  currentStrategy?: string
+  consecutiveFailures: number
+  failureHistory: Array<{ timestamp: number; strategy: string; reason: string }>
+}
 type VpnProtocolType =
   | 'vless'
   | 'vmess'
@@ -182,6 +208,8 @@ interface VpnConfig {
   servers: VpnServer[]
   localHttpPort?: number
   localSocksPort?: number
+  processRoutingMode?: ProcessRoutingMode
+  processList?: string[]
 }
 
 interface VpnStatus extends CoreStatus {
@@ -192,6 +220,8 @@ interface VpnStatus extends CoreStatus {
   localSocksPort?: number
   uploadSpeedBps?: number
   downloadSpeedBps?: number
+  processRoutingMode?: ProcessRoutingMode
+  processList?: string[]
 }
 
 interface DnsAiConfig {
@@ -243,6 +273,8 @@ interface ZapretConfig {
   gameUdpFake?: string
   discordUdpFakeBin?: string
   gameUdpFakeBin?: string
+  discordVoiceFix?: boolean
+  autoFailover?: boolean
   selectedServices?: string[]
   enabledMods?: string[]
   modOrder?: string[]
@@ -261,3 +293,4 @@ interface CoreStatus {
   startedAt?: number
   lastError?: string
 }
+

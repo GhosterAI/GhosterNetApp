@@ -589,6 +589,11 @@ export async function buildRuntimeStrategyBatch(
       .join('\r\n')
   }
 
+  // Apply Discord Voice & Video Fixer (optimized UDP WebRTC STUN desync)
+  if (z.discordVoiceFix) {
+    extraTokens.push('--filter-udp=50000-50100 --dpi-desync=fake --dpi-desync-repeats=2')
+  }
+
   if (extraTokens.length > 0) {
     const trimmed = content.trimEnd()
     content = `${trimmed} ${extraTokens.join(' ')}\r\n`
