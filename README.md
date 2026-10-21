@@ -2,8 +2,6 @@
 
 <div align="center">
 
-  <img src="https://raw.githubusercontent.com/GhosterAI/GhosterNet/main/assets/ghost-sculpture.svg" width="160" height="160" alt="GhosterNet Logo" />
-
   # GhosterNet v3.0.0
   
   **Единый сетевой инструмент для Windows 10 & 11 (x64)**  
