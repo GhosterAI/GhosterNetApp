@@ -2,10 +2,12 @@
 
 <div align="center">
 
-  # GhosterNet v3.0.0
+  <img src="https://raw.githubusercontent.com/GhosterAI/GhosterNet/main/assets/ghost-sculpture.svg" width="160" height="160" alt="GhosterNet Logo" />
+
+  # GhosterNet v3.1.0
   
   **Единый сетевой инструмент для Windows 10 & 11 (x64)**  
-  *Обход DPI (Zapret + WinDivert), Telegram MTProto WS, Universal VPN (sing-box + Wintun TUN), AmneziaWG (AWG), Psiphon VPN, зашифрованный DNS-AI и разблокировка Google Antigravity IDE.*
+  *Обход DPI (Zapret + WinDivert), Telegram MTProto WS, Universal VPN (sing-box + Wintun TUN), AmneziaWG (AWG), зашифрованный DNS-AI и разблокировка Google Antigravity IDE.*
 
   <p align="center">
     <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest"><img src="https://img.shields.io/github/v/release/GhosterAI/GhosterNetApp?style=for-the-badge&logo=windows&logoColor=white&color=7c3aed" alt="Latest Release"></a>
@@ -17,7 +19,7 @@
   <p align="center">
     <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest/download/GhosterNet_x64.exe"><strong>Скачать установщик (.exe)</strong></a> •
     <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest/download/GhosterNet_x64-portable.7z"><strong>Скачать Portable (.7z)</strong></a> •
-    <a href="https://ghosternet.vercel.app/"><strong>Официальный сайт</strong></a> •
+    <a href="https://github.com/GhosterAI/GhosterNet"><strong>Официальный сайт</strong></a> •
     <a href="#быстрый-старт"><strong>Быстрый старт</strong></a> •
     <a href="#архитектура-и-модули"><strong>Архитектура</strong></a> •
     <a href="#часто-задаваемые-вопросы-faq"><strong>FAQ</strong></a>
@@ -28,7 +30,7 @@
 ---
 
 > [!NOTE]
-> **GhosterNet** сочетает в себе технологии пакетной десинхронизации ядра сетевого стека Windows (WinDivert), локальные защищенные микро-мосты (Telegram WS, Psiphon, DNS-AI, Antigravity) и полноценный универсальный VPN-клиент на базе ядра sing-box и драйвера Wintun с интеллектуальной маршрутизацией.
+> **GhosterNet** сочетает в себе технологии пакетной десинхронизации ядра сетевого стека Windows (WinDivert), локальные защищенные микро-мосты (Telegram WS, DNS-AI, Antigravity) и полноценный универсальный VPN-клиент на базе ядра sing-box и драйвера Wintun с интеллектуальной маршрутизацией.
 
 ---
 
@@ -40,11 +42,10 @@
   - [1. Zapret DPI Bypass](#1-zapret-dpi-bypass)
   - [2. Telegram WS Proxy и мониторинг DC](#2-telegram-ws-proxy-и-мониторинг-dc)
   - [3. Universal VPN и AmneziaWG (sing-box + Wintun)](#3-universal-vpn-и-amneziawg-sing-box--wintun)
-  - [4. Psiphon VPN & Proxy](#4-psiphon-vpn--proxy)
-  - [5. DNS-AI и DoH Resolver](#5-dns-ai-и-doh-resolver)
-  - [6. Antigravity Unlocker](#6-antigravity-unlocker)
-  - [7. Сетевой доктор и диагностика](#7-сетевой-доктор-и-диагностика)
-  - [8. Системный трей и профили](#8-системный-трей-и-профили)
+  - [4. DNS-AI и DoH Resolver](#4-dns-ai-и-doh-resolver)
+  - [5. Antigravity Unlocker](#5-antigravity-unlocker)
+  - [6. Сетевой доктор и диагностика](#6-сетевой-доктор-и-диагностика)
+  - [7. Системный трей и профили](#7-системный-трей-и-профили)
 - [Схема маршрутизации трафика](#схема-маршрутизации-трафика)
   - [Каталог пресетов и списков обхода](#каталог-пресетов-и-списков-обхода)
 - [Быстрый старт](#быстрый-старт)
@@ -73,7 +74,6 @@ flowchart LR
     B -->|"DPI: YouTube, Discord"| C["Zapret + WinDivert (Десинхронизация)"]
     B -->|"Telegram: медиа и звонки"| D["TgWsProxy (WebSocket Edge)"]
     B -->|"Туннель: VLESS, AWG, Hysteria"| E["Universal VPN (sing-box + Wintun)"]
-    B -->|"Резервный обход цензуры"| F["Psiphon VPN & Proxy"]
     B -->|"ИИ: ChatGPT, Claude, Gemini"| G["DNS-AI (Зашифрованный DoH/DoT)"]
     B -->|"Google Antigravity IDE"| H["AG Unlocker (Loopback 127.0.10.x)"]
     B -->|"Локальные ресурсы и игры"| I["Прямое соединение (Direct)"]
@@ -81,7 +81,6 @@ flowchart LR
     C --> OUT["Интернет / Провайдер"]
     D --> OUT
     E --> OUT
-    F --> OUT
     G --> OUT
     H --> OUT
     I --> OUT
@@ -99,7 +98,6 @@ flowchart LR
 | **Discord (Голос + Видео)** | Работает | Не обрабатывает UDP | Требует сложных BAT | **Встроенный фильтр TCP + UDP** |
 | **Telegram (Медиа и звонки)** | Блокируется | Не поддерживается | Не поддерживается | **TgWsProxy + мониторинг DC1–DC5** |
 | **Universal VPN & AWG** | Отдельное приложение | Не поддерживается | Не поддерживается | **Встроенный sing-box v1.14 + Wintun** |
-| **Отказоустойчивый Psiphon**| Отдельное приложение | Не поддерживается | Не поддерживается | **Встроенный Psiphon с системным прокси** |
 | **Google Antigravity IDE** | Требует смены региона | Не поддерживается | Не поддерживается | **Разблокировка без смены региона** |
 | **ИИ-сервисы (Gemini, ChatGPT)**| Блокировка аккаунтов | Не поддерживается | Не поддерживается | **Шифрованный DoH (DNS-AI)** |
 | **Графический интерфейс** | Да | Консоль | BAT-скрипты | **Современный минималистичный UI** |
@@ -169,17 +167,7 @@ sequenceDiagram
 
 ---
 
-### 4. Psiphon VPN & Proxy
-
-Встроенный клиент распределенной сети Psiphon для автоматического обхода жесткой цензуры.
-
-- **Автоматический поиск рабочих узлов**: динамическое подключение к независимым серверам сети без необходимости ручного добавления ключей или файлов конфигурации.
-- **Поддержка системного прокси**: возможность автоматического включения системного прокси Windows в один клик либо работа в режиме локальных портов (HTTP: 20807, SOCKS5: 20808).
-- **Выбор региона выхода**: подключение к автоматическому узлу или конкретной стране из списка доступных регионов.
-
----
-
-### 5. DNS-AI и DoH Resolver
+### 4. DNS-AI и DoH Resolver
 
 Решение для обхода региональных ограничений веб-интерфейсов и API ИИ-платформ (Google Gemini, OpenAI ChatGPT, Anthropic Claude, GitHub Copilot) без замедления остального трафика.
 
@@ -191,7 +179,7 @@ sequenceDiagram
 
 ---
 
-### 6. Antigravity Unlocker
+### 5. Antigravity Unlocker
 
 Специализированный модуль для разработчиков, снимающий региональные ограничения среды **Google Antigravity IDE** в России без необходимости включения общего VPN и смены региона учетной записи Google.
 
@@ -202,7 +190,7 @@ sequenceDiagram
 
 ---
 
-### 7. Сетевой доктор и диагностика
+### 6. Сетевой доктор и диагностика
 
 Встроенный диагностический комплекс для анализа сетевого окружения и устранения неисправностей:
 
@@ -216,7 +204,7 @@ sequenceDiagram
 
 ---
 
-### 8. Системный трей и профили
+### 7. Системный трей и профили
 
 - **Компактный режим**: сворачивание в системный трей Windows с управлением всеми модулями из контекстного меню.
 - **Экспорт и импорт профилей (`.ghosternet`)**: перенос пользовательских настроек, списков доменов, выбранных стратегий и конфигураций на другие устройства.
@@ -232,7 +220,7 @@ flowchart TD
         AppBrowser["Браузеры: Chrome, Edge, Firefox"]
         AppDiscord["Discord: чат, звонки, стримы"]
         AppTG["Telegram Desktop"]
-        AppVPN["VPN-трафик: sing-box / Psiphon"]
+        AppVPN["VPN-трафик: sing-box (Wintun TUN)"]
         AppIDE["Google Antigravity IDE"]
         AppGames["Игровые лаунчеры и игры"]
     end
@@ -241,7 +229,7 @@ flowchart TD
         direction TB
         EngineDPI["Zapret (winws.exe + WinDivert64)"]
         EngineTG["TgWsProxy (127.0.10.1:1443)"]
-        EngineVPN["Universal VPN & Psiphon Core"]
+        EngineVPN["Universal VPN Core (sing-box)"]
         EngineDNS["DNS-AI (127.0.0.1:53 / DoH)"]
         EngineAG["AG Unlocker (127.0.10.x:24816)"]
         EngineDoctor["Сетевой доктор (Auto-Fix)"]
@@ -388,7 +376,6 @@ pnpm run build:win
 - **[Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)** — бинарные сборки winws и наборы стратегий;
 - **[Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)** — реализация локального WebSocket-моста для Telegram;
 - **[SagerNet/sing-box](https://github.com/SagerNet/sing-box)** — высокопроизводительное универсальное сетевое ядро;
-- **[Psiphon-Labs/psiphon-tunnel-core](https://github.com/Psiphon-Labs/psiphon-tunnel-core)** — клиент распределенной отказоустойчивой сети;
 - **[confeden/DNS-AI](https://github.com/confeden/DNS-AI)** — шифрованный DNS-резолвер для обхода региональных ограничений;
 - **[confeden/Antigravity](https://github.com/confeden/Antigravity)** — модуль разблокировки среды Google Antigravity IDE;
 - **[basil00/WinDivert](https://reqrypt.org/windivert.html)** — драйвер захвата и модификации сетевых пакетов Windows.

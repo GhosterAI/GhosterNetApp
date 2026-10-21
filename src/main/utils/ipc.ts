@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { ipcMain, app, shell, clipboard, BrowserWindow, dialog } from 'electron'
 import { getAppConfig, patchAppConfig } from '../config'
 import { applyTheme, setNativeTheme } from '../resolve/theme'
@@ -131,14 +132,6 @@ import {
   removeAgManualPath,
   getAgLogs
 } from '../core/ag-unlocker'
-import {
-  getPsiphonStatus,
-  startPsiphon,
-  stopPsiphon,
-  restartPsiphon,
-  togglePsiphonSystemProxy,
-  setPsiphonRegion
-} from '../core/psiphon'
 import {
   getVpnStatus,
   startVpn,
@@ -529,6 +522,30 @@ export function registerIpcMainHandlers(): void {
     installDnsAiUpdate(url as string, expectedVersion as string | undefined)
   ))
   ipcMain.handle('dnsAi:dismissUpdate', h((tag) => dismissDnsAiUpdate(tag as string)))
+  ipcMain.handle(
+    'dnsAi:fixGemini',
+    h(async () => {
+      const cfg = await getAppConfig()
+      const cur = cfg.zapret?.selectedServices ?? []
+      if (!cur.includes('ai') || !cfg.zapret?.systemHostsManaged) {
+        const next = cur.includes('ai') ? cur : [...cur, 'ai']
+        await patchAppConfig({
+          zapret: {
+            ...(cfg.zapret as ZapretConfig),
+            selectedServices: next,
+            systemHostsManaged: true
+          }
+        })
+      }
+      const state = await applySystemHosts()
+      try {
+        spawnSync('ipconfig.exe', ['/flushdns'], { windowsHide: true, timeout: 4000 })
+      } catch {
+        /* noop */
+      }
+      return state
+    })
+  )
 
   // ---- Antigravity Unlocker -----------------------------------------------
   ipcMain.handle('ag:status', h((deep) => getAgStatus(Boolean(deep))))
@@ -582,14 +599,6 @@ export function registerIpcMainHandlers(): void {
       return { ok: false, message: err instanceof Error ? err.message : String(err) }
     }
   })
-
-  // ---- Psiphon VPN & Proxy ------------------------------------------------
-  ipcMain.handle('psiphon:status', h(() => getPsiphonStatus()))
-  ipcMain.handle('psiphon:start', h(() => startPsiphon()))
-  ipcMain.handle('psiphon:stop', h(() => stopPsiphon()))
-  ipcMain.handle('psiphon:restart', h(() => restartPsiphon()))
-  ipcMain.handle('psiphon:setSystemProxy', h((enable) => togglePsiphonSystemProxy(Boolean(enable))))
-  ipcMain.handle('psiphon:setRegion', h((region) => setPsiphonRegion(String(region || ''))))
 
   // ---- Universal VPN (sing-box + VLESS / Reality / Hysteria2) --------------
   ipcMain.handle('vpn:status', h(() => getVpnStatus()))

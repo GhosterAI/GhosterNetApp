@@ -1,10 +1,10 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import { Worker } from 'node:worker_threads'
-import { dnsAiBinaryPath, dnsAiEndpointsPath } from '../utils/dirs'
+import { dnsAiBinaryPath, dnsAiEndpointsPath, dnsAiRuntimeDir, resourcesDir } from '../utils/dirs'
 import { appLog } from '../utils/app-logger'
 
 function emitLog(type: 'info' | 'warn' | 'error', _src: string, msg: string): void {
@@ -148,9 +148,45 @@ function saveDiskSettings(settings: DnsAiSettings): void {
   }
 }
 
+function syncEndpointsIfOutdated(): void {
+  try {
+    const bundled = path.join(resourcesDir(), 'dns-ai', 'endpoints.json')
+    if (!existsSync(bundled)) return
+    const bundledParsed = JSON.parse(readFileSync(bundled, 'utf8'))
+    const bundledSerial = Number(bundledParsed.serial || 0)
+
+    const syncTarget = (dest: string): void => {
+      try {
+        if (!existsSync(dest)) {
+          mkdirSync(path.dirname(dest), { recursive: true })
+          copyFileSync(bundled, dest)
+          return
+        }
+        const existing = JSON.parse(readFileSync(dest, 'utf8'))
+        // Do not overwrite dynamic resolver results unless serial is explicitly lower
+        if (existing.source === 'resolver') {
+          return
+        }
+        const existingSerial = Number(existing.serial || 0)
+        if (existingSerial < bundledSerial) {
+          copyFileSync(bundled, dest)
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    syncTarget(path.join(dnsAiRuntimeDir(), 'endpoints.json'))
+    syncTarget(path.join(getDnsAiDataDir(), 'endpoints.json'))
+  } catch {
+    // ignore
+  }
+}
+
 function readEndpoints(): { dohUrl: string; dotHost: string; ipv4: string[]; ipv6: string[] } {
-  const defaultV4 = ['186.246.49.127', '192.144.59.14']
-  const defaultV6 = ['2a0a:2b41:0:500d::53', '2a0d:8480:0:67c::14']
+  syncEndpointsIfOutdated()
+  const defaultV4 = ['194.87.196.13', '45.151.102.219']
+  const defaultV6 = ['2a00:b700:5::3:62', '2a12:5940:d4ef::219']
   try {
     const dataEndpoints = path.join(getDnsAiDataDir(), 'endpoints.json')
     const bundledEndpoints = dnsAiEndpointsPath()
@@ -695,6 +731,7 @@ export async function checkDnsAiServices(): Promise<DnsAiServiceCheckResult[]> {
               port: 443,
               path: '/',
               method: 'GET',
+              maxHeaderSize: 65536,
               headers: {
                 'User-Agent':
                   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',

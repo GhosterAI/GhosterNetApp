@@ -96,14 +96,6 @@ export const defaultConfig: AppConfig = {
     modOrder: [],
     systemHostsManaged: false
   },
-  psiphon: {
-    enabled: false,
-    autoStart: false,
-    httpPort: 20807,
-    socksPort: 20808,
-    egressRegion: '',
-    systemProxy: false
-  },
   vpn: {
     enabled: false,
     autoStart: false,

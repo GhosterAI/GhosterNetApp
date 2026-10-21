@@ -36,7 +36,13 @@ import {
   type DnsAiUpdateInfo,
   type AgUpdateInfo
 } from '@renderer/utils/ipc'
-import { POWER_ON_BANNER_STYLE } from '@renderer/lib/utils'
+import {
+  POWER_ON_BANNER_STYLE,
+  BUNDLED_TGWS_VERSION,
+  BUNDLED_ZAPRET_VERSION,
+  BUNDLED_AG_VERSION,
+  BUNDLED_DNS_AI_VERSION
+} from '@renderer/lib/utils'
 
 interface ComponentUpdateItem {
   id: 'ghosternet' | 'zapret' | 'tgws' | 'dnsai' | 'ag'
@@ -186,7 +192,7 @@ export const UpdateCenterCard: React.FC = () => {
       subtitle: 'Основная оболочка клиента GhosterNet и UI',
       icon: Sparkles,
       repoUrl: 'https://github.com/GhosterAI/GhosterNetApp/releases',
-      installed: ghosternet?.installed ?? '2.1.0',
+      installed: ghosternet?.installed ?? '3.1.0',
       latest: ghosternet?.latest,
       hasUpdate: Boolean(ghosternet?.hasUpdate),
       assetUrl: ghosternet?.assetUrl,
@@ -201,7 +207,7 @@ export const UpdateCenterCard: React.FC = () => {
       subtitle: 'Движок winws.exe, наборы стратегий и списки блокировок',
       icon: Radio,
       repoUrl: 'https://github.com/Flowseal/zapret-discord-youtube/releases',
-      installed: zapret?.installed ?? appConfig?.zapret?.installedVersion ?? '1.10.3',
+      installed: zapret?.installed ?? appConfig?.zapret?.installedVersion ?? BUNDLED_ZAPRET_VERSION,
       latest: zapret?.latest,
       hasUpdate: Boolean(zapret?.hasUpdate),
       assetUrl: zapret?.assetUrl,
@@ -216,7 +222,7 @@ export const UpdateCenterCard: React.FC = () => {
       subtitle: 'Бинарник MTProto TgWsProxy поверх WebSocket и Cloudflare',
       icon: Send,
       repoUrl: 'https://github.com/Flowseal/tg-ws-proxy/releases',
-      installed: tgws?.installed ?? appConfig?.tgws?.installedVersion ?? '1.11.1',
+      installed: tgws?.installed ?? appConfig?.tgws?.installedVersion ?? BUNDLED_TGWS_VERSION,
       latest: tgws?.latest,
       hasUpdate: Boolean(tgws?.hasUpdate),
       assetUrl: tgws?.assetUrl,
@@ -231,7 +237,7 @@ export const UpdateCenterCard: React.FC = () => {
       subtitle: 'Служба DNS-AI.exe, локальный DoH резолвер для нейросетей',
       icon: Globe2,
       repoUrl: 'https://github.com/confeden/DNS-AI/releases',
-      installed: dnsAi?.installed ?? appConfig?.dnsAi?.installedVersion ?? '1.0.0',
+      installed: dnsAi?.installed ?? appConfig?.dnsAi?.installedVersion ?? BUNDLED_DNS_AI_VERSION,
       latest: dnsAi?.latest,
       hasUpdate: Boolean(dnsAi?.hasUpdate),
       assetUrl: dnsAi?.assetUrl,
@@ -246,7 +252,7 @@ export const UpdateCenterCard: React.FC = () => {
       subtitle: 'Движок AG_*.exe, обход ограничений Google Antigravity IDE',
       icon: Cpu,
       repoUrl: 'https://github.com/confeden/Antigravity/releases',
-      installed: ag?.installed ?? appConfig?.agUnlocker?.installedVersion ?? '2.21.1',
+      installed: ag?.installed ?? appConfig?.agUnlocker?.installedVersion ?? BUNDLED_AG_VERSION,
       latest: ag?.latest,
       hasUpdate: Boolean(ag?.hasUpdate),
       assetUrl: ag?.assetUrl,

@@ -38,16 +38,6 @@ export const tgwsStop = (): Promise<void> => invoke('tgws:stop')
 export const tgwsRestart = (): Promise<void> => invoke('tgws:restart')
 export const tgwsGetLink = (): Promise<string> => invoke('tgws:getLink')
 
-// ---- Psiphon VPN & Proxy ----------------------------------------------------
-export const psiphonStatus = (): Promise<PsiphonStatus> => invoke('psiphon:status')
-export const psiphonStart = (): Promise<void> => invoke('psiphon:start')
-export const psiphonStop = (): Promise<void> => invoke('psiphon:stop')
-export const psiphonRestart = (): Promise<void> => invoke('psiphon:restart')
-export const psiphonSetSystemProxy = (enable: boolean): Promise<void> =>
-  invoke('psiphon:setSystemProxy', enable)
-export const psiphonSetRegion = (region: string): Promise<void> =>
-  invoke('psiphon:setRegion', region)
-
 export interface TgwsTuneReport {
   mode: 'bridge' | 'direct' | 'auto'
   summary: string
@@ -484,6 +474,8 @@ export const dnsAiInstallUpdate = (
   invoke('dnsAi:installUpdate', url, expectedVersion)
 export const dnsAiDismissUpdate = (tag: string): Promise<void> =>
   invoke('dnsAi:dismissUpdate', tag)
+export const dnsAiFixGemini = (): Promise<SystemHostsState> =>
+  invoke('dnsAi:fixGemini')
 
 // ---- Antigravity Unlocker ---------------------------------------------------
 export interface AgUnlockerSettings {

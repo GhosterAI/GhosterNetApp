@@ -13,7 +13,7 @@ const REQUEST_HEADERS: Record<string, string> = {
   Accept: 'application/vnd.github+json'
 }
 
-const BUNDLED_TGWS_VERSION = '1.11.1'
+const BUNDLED_TGWS_VERSION = '1.11.2'
 
 export interface TgwsUpdateInfo {
   installed?: string

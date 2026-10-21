@@ -3,7 +3,12 @@ import { ExternalLink, Github } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
 import { Button } from '@renderer/components/ui/button'
 import BasePage from '@renderer/components/base/base-page'
-import { BUNDLED_TGWS_VERSION, BUNDLED_ZAPRET_VERSION } from '@renderer/lib/utils'
+import {
+  BUNDLED_TGWS_VERSION,
+  BUNDLED_ZAPRET_VERSION,
+  BUNDLED_AG_VERSION,
+  BUNDLED_DNS_AI_VERSION
+} from '@renderer/lib/utils'
 import ghostSculpture from '@renderer/assets/ghost-sculpture.svg'
 
 const About: React.FC = () => {
@@ -56,14 +61,14 @@ const About: React.FC = () => {
               </li>
               <li>
                 <span className="font-semibold text-foreground">
-                  Antigravity Unlocker (v2.21.1)
+                  Antigravity Unlocker (v{BUNDLED_AG_VERSION})
                 </span>{' '}
                 — работа Google Antigravity IDE без VPN и смены региона аккаунта Google через
                 локальный туннель, Loopback IP, Hosts Pinning и патчинг IDE.
               </li>
               <li>
                 <span className="font-semibold text-foreground">
-                  DNS-AI (v1.0.0) &amp; Системный DNS
+                  DNS-AI (v{BUNDLED_DNS_AI_VERSION}) &amp; Системный DNS
                 </span>{' '}
                 — локальный зашифрованный DoH/DoT резолвер (127.0.0.1:53) с поддержкой Comss,
                 Xbox DNS, Malw.link, Cloudflare и Quad9 для разблокировки ChatGPT, Claude, Gemini

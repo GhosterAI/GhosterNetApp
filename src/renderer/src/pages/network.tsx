@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   FolderArchive,
   Globe2,
-  Info,
   Loader2,
   RefreshCw,
   RotateCcw,
@@ -49,6 +48,7 @@ import {
   dnsAiCheckUpdate,
   dnsAiInstallUpdate,
   dnsAiDismissUpdate,
+  dnsAiFixGemini,
   type DnsAiUpdateInfo,
   modsList,
   modsToggle,
@@ -81,6 +81,7 @@ const NetworkPage: React.FC = () => {
   const [dnsAiUpdate, setDnsAiUpdate] = useState<DnsAiUpdateInfo | null>(null)
   const [dnsAiUpdating, setDnsAiUpdating] = useState(false)
   const [dnsAiUpdateDismissed, setDnsAiUpdateDismissed] = useState(false)
+  const [geminiFixBusy, setGeminiFixBusy] = useState(false)
 
   // DNS state
   const [presets, setPresets] = useState<DnsPresetDescriptor[]>([])
@@ -298,6 +299,27 @@ const NetworkPage: React.FC = () => {
       })
     } finally {
       setAiChecking(false)
+    }
+  }
+
+  const handleFixGemini = async (): Promise<void> => {
+    if (geminiFixBusy) return
+    setGeminiFixBusy(true)
+    const tId = toast.loading('Применяем автонастройку Gemini в hosts…')
+    try {
+      const res = await dnsAiFixGemini()
+      toast.success(`Google Gemini настроен (${res.entryCount} записей в hosts)`, {
+        id: tId,
+        description: 'Отключите «Безопасный DNS» в браузере и перезапустите его.',
+        style: POWER_ON_BANNER_STYLE
+      })
+    } catch (e) {
+      toast.error('Не удалось применить автонастройку Gemini', {
+        id: tId,
+        description: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setGeminiFixBusy(false)
     }
   }
 
@@ -794,17 +816,36 @@ const NetworkPage: React.FC = () => {
               </div>
             )}
 
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1 text-xs">
-              <div className="font-semibold flex items-center gap-1.5 text-primary">
-                <Info className="h-4 w-4" />
-                Если в браузере (Chrome / Edge / Яндекс) не открывается Gemini:
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="font-semibold flex items-center gap-1.5 text-primary">
+                  <Sparkles className="h-4 w-4" />
+                  Автонастройка доступа к Google Gemini:
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs bg-primary/10 hover:bg-primary/20 border-primary/30 text-primary cursor-pointer gap-1.5"
+                  disabled={geminiFixBusy}
+                  onClick={() => void handleFixGemini()}
+                >
+                  {geminiFixBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Wrench className="h-3.5 w-3.5" />
+                  )}
+                  Применить автофикс Gemini
+                </Button>
               </div>
               <ul className="list-disc pl-4 space-y-1 text-[11px] text-muted-foreground">
                 <li>
-                  <strong>Отключите «Безопасный DNS» в браузере:</strong> Настройки браузера → Конфиденциальность → Безопасность → выключите «Использовать безопасный DNS», чтобы браузер не отправлял запросы мимо системы к внешним серверам.
+                  Прописывает проверенные скоростные SNI-адреса для всех поддоменов Gemini и AI Studio (132.243.112.221) в системный файл <code>hosts</code>.
                 </li>
                 <li>
-                  <strong>Сбросьте кэш сокетов:</strong> перезапустите браузер или откройте вкладку в Режиме Инкогнито, чтобы браузер сбросил старое заблокированное соединение.
+                  <strong>Отключите «Безопасный DNS» в браузере:</strong> Настройки браузера → Конфиденциальность → Безопасность → выключите «Использовать безопасный DNS», чтобы браузер обращался через системный файл hosts.
+                </li>
+                <li>
+                  <strong>Сбросьте кэш сокетов:</strong> перезапустите браузер или откройте вкладку в Режиме Инкогнито, чтобы сбросить старое соединение.
                 </li>
               </ul>
             </div>

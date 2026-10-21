@@ -16,7 +16,7 @@ const REQUEST_HEADERS: Record<string, string> = {
   Accept: 'application/vnd.github+json'
 }
 
-export const BUNDLED_DNS_AI_VERSION = '1.0.0'
+export const BUNDLED_DNS_AI_VERSION = '1.1.0'
 
 export interface DnsAiUpdateInfo {
   installed?: string

@@ -1,5 +1,5 @@
 import { is } from '@electron-toolkit/utils'
-import { existsSync, mkdirSync, readdirSync } from 'fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'fs'
 import { app } from 'electron'
 import path from 'path'
 
@@ -119,8 +119,22 @@ export function dnsAiBinaryPath(): string {
 
 export function dnsAiEndpointsPath(): string {
   const rt = path.join(dnsAiRuntimeDir(), 'endpoints.json')
+  const bundled = path.join(resourcesDir(), 'dns-ai', 'endpoints.json')
+  if (existsSync(rt) && existsSync(bundled)) {
+    try {
+      const rtParsed = JSON.parse(readFileSync(rt, 'utf8'))
+      const bundledParsed = JSON.parse(readFileSync(bundled, 'utf8'))
+      const rtSerial = Number(rtParsed.serial || 0)
+      const bundledSerial = Number(bundledParsed.serial || 0)
+      if (rtSerial >= bundledSerial) return rt
+      return bundled
+    } catch {
+      // fallback to bundled
+      return bundled
+    }
+  }
   if (existsSync(rt)) return rt
-  return path.join(resourcesDir(), 'dns-ai', 'endpoints.json')
+  return bundled
 }
 
 export function agUnlockerRuntimeDir(): string {
@@ -153,16 +167,6 @@ export function agUnlockerBinaryPath(): string {
     }
   }
   return path.join(resourcesDir(), 'ag-unlocker', 'AG_2.21.1.exe')
-}
-
-export function psiphonRuntimeDir(): string {
-  return path.join(runtimeDir(), 'psiphon')
-}
-
-export function psiphonBinaryPath(): string {
-  const rt = path.join(psiphonRuntimeDir(), 'psiphon-tunnel-core.exe')
-  if (existsSync(rt)) return rt
-  return path.join(resourcesDir(), 'psiphon', 'psiphon-tunnel-core.exe')
 }
 
 export function vpnRuntimeDir(): string {

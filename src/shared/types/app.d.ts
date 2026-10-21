@@ -132,7 +132,6 @@ interface AppConfig {
   dns?: DnsConfig
   dnsAi?: DnsAiConfig
   agUnlocker?: AgUnlockerConfig
-  psiphon?: PsiphonConfig
   vpn?: VpnConfig
 }
 
@@ -193,24 +192,6 @@ interface VpnStatus extends CoreStatus {
   localSocksPort?: number
   uploadSpeedBps?: number
   downloadSpeedBps?: number
-}
-
-interface PsiphonConfig {
-  enabled: boolean
-  autoStart?: boolean
-  httpPort: number
-  socksPort: number
-  egressRegion?: string
-  systemProxy: boolean
-  installedVersion?: string
-}
-
-interface PsiphonStatus extends CoreStatus {
-  httpPort?: number
-  socksPort?: number
-  connectedRegion?: string
-  systemProxy?: boolean
-  availableRegions?: string[]
 }
 
 interface DnsAiConfig {

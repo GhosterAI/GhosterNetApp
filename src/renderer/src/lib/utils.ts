@@ -24,5 +24,7 @@ export const POWER_OFF_BANNER_STYLE: CSSProperties = {
   color: 'var(--foreground)'
 }
 
-export const BUNDLED_TGWS_VERSION = '1.11.1'
-export const BUNDLED_ZAPRET_VERSION = '1.10.3'
+export const BUNDLED_TGWS_VERSION = '1.11.2'
+export const BUNDLED_ZAPRET_VERSION = '1.10.4'
+export const BUNDLED_AG_VERSION = '2.24.0.1'
+export const BUNDLED_DNS_AI_VERSION = '1.1.0'

@@ -89,7 +89,7 @@ function backgroundRefresh(): void {
     })
 }
 
-const BUNDLED_ZAPRET_VERSION = '1.10.3'
+const BUNDLED_ZAPRET_VERSION = '1.10.4'
 
 function effectiveInstalled(cfgInstalled?: string): string {
   return cfgInstalled && cfgInstalled.trim() ? cfgInstalled.trim() : BUNDLED_ZAPRET_VERSION

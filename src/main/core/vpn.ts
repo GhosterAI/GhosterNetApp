@@ -8,8 +8,6 @@ import { vpnBinaryPath, vpnRulesDir, vpnRuntimeDir, wintunDllPath, wireproxyBina
 import { getAppConfig, patchAppConfig } from '../config'
 import { buildSingBoxConfig, buildWireproxyConfig } from './vpn-config'
 import { parseVpnInput, ParseResult } from './vpn-parser'
-import { getPsiphonStatus } from './psiphon'
-import { disableWindowsSystemProxy } from '../sys/system-proxy'
 
 let child: ChildProcess | null = null
 let wireproxyChild: ChildProcess | null = null
@@ -164,13 +162,6 @@ export async function startVpn(): Promise<void> {
   log('info', `Запуск VPN: подключение к ${selectedServer.name} (${selectedServer.server}:${selectedServer.serverPort})…`)
 
   await killStaleSingBox()
-
-  // Coexistence: disable Psiphon system proxy if active so TUN routes cleanly
-  const psiphonStatus = getPsiphonStatus()
-  if (psiphonStatus.state === 'running' && psiphonStatus.systemProxy) {
-    log('warn', 'Внимание: Системный прокси Psiphon временно отключен во избежание конфликта с TUN-адаптером VPN.')
-    await disableWindowsSystemProxy().catch(() => void 0)
-  }
 
   const runDir = vpnRuntimeDir()
   if (!existsSync(runDir)) mkdirSync(runDir, { recursive: true })

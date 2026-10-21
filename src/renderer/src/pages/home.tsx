@@ -9,21 +9,18 @@ import { CharacterMorph } from '@renderer/components/ui/character-morph'
 import { useTgwsStore } from '@renderer/store/tgws-store'
 import { useZapretStore } from '@renderer/store/zapret-store'
 import { useZapretTestStore } from '@renderer/store/zapret-test-store'
-import { usePsiphonStore } from '@renderer/store/psiphon-store'
 import { useVpnStore } from '@renderer/store/vpn-store'
 import { useAppConfig } from '@renderer/hooks/use-app-config'
 import {
   tgwsStart, tgwsStop, tgwsRestart,
   zapretStart, zapretStop, zapretRestart,
-  psiphonStart, psiphonStop, psiphonRestart,
-  psiphonSetSystemProxy,
   vpnStart, vpnStop, vpnRestart,
   profilesSwitch,
   getAppVersion
 } from '@renderer/utils/ipc'
 import { Button } from '@renderer/components/ui/button'
 import { POWER_ON_BANNER_STYLE, BUNDLED_TGWS_VERSION, BUNDLED_ZAPRET_VERSION } from '@renderer/lib/utils'
-import { RotateCw, Layers, Globe } from 'lucide-react'
+import { RotateCw, Layers } from 'lucide-react'
 import { CountryFlag, detectCountryCode } from '@renderer/components/ui/country-flag'
 import Power from '@renderer/assets/on_icon.svg'
 import Pause from '@renderer/assets/pause_icon.svg'
@@ -207,11 +204,8 @@ const Home: React.FC = () => {
   const navigate = useNavigate()
   const tgws = useTgwsStore((s) => s.status)
   const zapret = useZapretStore((s) => s.status)
-  const psiphon = usePsiphonStore((s) => s.status)
   const vpn = useVpnStore((s) => s.status)
-  // Block the Zapret toggle while the strategy tester is iterating —
-  // a click here would race the lock held by zapret-tester.ts in main
-  // and queue silently behind the test, which feels like a stuck button.
+
   const isZapretTesting = useZapretTestStore((s) => s.isRunning)
   const { appConfig, mutateAppConfig } = useAppConfig()
 
@@ -233,7 +227,6 @@ const Home: React.FC = () => {
     }
   }
 
-
   const toggleTgws = async (next: boolean): Promise<void> => {
     try {
       if (next) await tgwsStart()
@@ -245,6 +238,7 @@ const Home: React.FC = () => {
       })
     }
   }
+
   const toggleZapret = async (next: boolean): Promise<void> => {
     if (next && !zapretStrategy) {
       navigate('/zapret', { state: { autoStart: true } })
@@ -256,18 +250,6 @@ const Home: React.FC = () => {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       toast.error(next ? 'Не удалось запустить Zapret' : 'Не удалось остановить Zapret', {
-        description: msg
-      })
-    }
-  }
-
-  const togglePsiphon = async (next: boolean): Promise<void> => {
-    try {
-      if (next) await psiphonStart()
-      else await psiphonStop()
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      toast.error(next ? 'Не удалось запустить Psiphon' : 'Не удалось остановить Psiphon', {
         description: msg
       })
     }
@@ -290,19 +272,6 @@ const Home: React.FC = () => {
     }
   }
 
-  const handleTogglePsiphonSystemProxy = async (enable: boolean): Promise<void> => {
-    try {
-      await psiphonSetSystemProxy(enable)
-      toast.success(
-        enable
-          ? 'Системный прокси Windows активирован'
-          : 'Системный прокси отключен (только локальные порты)'
-      )
-    } catch (e) {
-      toast.error('Не удалось изменить режим системного прокси')
-    }
-  }
-
   // App version pulled from main via IPC (electron's app.getVersion()
   const [appVersion, setAppVersion] = useState<string | null>(null)
   useEffect(() => {
@@ -317,7 +286,6 @@ const Home: React.FC = () => {
       const tasks: Promise<unknown>[] = []
       if (tgws.state === 'running' || tgws.state === 'error') tasks.push(tgwsRestart())
       if (zapret.state === 'running' || zapret.state === 'error') tasks.push(zapretRestart())
-      if (psiphon.state === 'running' || psiphon.state === 'error') tasks.push(psiphonRestart())
       if (vpn.state === 'running' || vpn.state === 'error') tasks.push(vpnRestart())
       if (tasks.length === 0) {
         toast.info('Нет запущенных процессов для перезагрузки', {
@@ -348,8 +316,6 @@ const Home: React.FC = () => {
     tgws.state === 'error' ||
     zapret.state === 'running' ||
     zapret.state === 'error' ||
-    psiphon.state === 'running' ||
-    psiphon.state === 'error' ||
     vpn.state === 'running' ||
     vpn.state === 'error'
 
@@ -376,7 +342,7 @@ const Home: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 px-4 flex-1 items-center max-w-6xl mx-auto w-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 flex-1 items-center max-w-5xl mx-auto w-full">
           <PowerToggle
             label="Zapret"
             status={zapret}
@@ -417,51 +383,7 @@ const Home: React.FC = () => {
               )
             }
           />
-          <PowerToggle
-            label="Psiphon VPN"
-            status={psiphon}
-            onToggle={togglePsiphon}
-            version={appConfig?.psiphon?.installedVersion ?? '1.0'}
-          />
         </div>
-
-        {/* Psiphon Connecting Hint Pill */}
-        {psiphon.state === 'starting' && (
-          <div className="flex justify-center pb-2 px-4 animate-in fade-in duration-300">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 backdrop-blur-xl px-4 py-1.5 text-xs text-amber-200 shadow-sm">
-              <Spinner className="size-3 text-amber-400 animate-spin" />
-              <span>Подключение к узлам Psiphon (обычно 15–30 сек)… Нажмите кнопку еще раз для отмены</span>
-            </div>
-          </div>
-        )}
-
-        {/* Psiphon Quick Controls Pill */}
-        {psiphon.state === 'running' && (
-          <div className="flex justify-center pb-2 px-4">
-            <div className="inline-flex flex-wrap items-center justify-center gap-2.5 rounded-full border border-border/40 bg-card/65 backdrop-blur-xl px-4 py-1.5 text-xs shadow-sm">
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <Globe className="size-3.5 text-primary" />
-                <span>
-                  {psiphon.connectedRegion ? `Регион: ${psiphon.connectedRegion}` : 'Подключено к Psiphon'}
-                </span>
-              </span>
-              <span className="h-3 w-px bg-border/40" />
-              <button
-                type="button"
-                onClick={() => void handleTogglePsiphonSystemProxy(!psiphon.systemProxy)}
-                className={`font-medium cursor-pointer transition-colors ${
-                  psiphon.systemProxy ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {psiphon.systemProxy ? 'Системный прокси (Вся система)' : 'Только локальный прокси'}
-              </button>
-              <span className="h-3 w-px bg-border/40" />
-              <span className="font-mono text-[11px] text-muted-foreground">
-                HTTP: {psiphon.httpPort || 20807} | SOCKS5: {psiphon.socksPort || 20808}
-              </span>
-            </div>
-          </div>
-        )}
 
         <div className="flex items-center justify-center h-12 pb-6">
           {anyProcessActive && (

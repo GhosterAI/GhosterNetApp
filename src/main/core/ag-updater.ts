@@ -13,7 +13,7 @@ const REQUEST_HEADERS: Record<string, string> = {
   Accept: 'application/vnd.github+json'
 }
 
-export const BUNDLED_AG_VERSION = '2.21.1'
+export const BUNDLED_AG_VERSION = '2.24.0.1'
 
 export interface AgUpdateInfo {
   installed?: string

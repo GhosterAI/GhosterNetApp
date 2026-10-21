@@ -14,7 +14,6 @@ const sourceColor: Record<CoreSource, string> = {
   tgws: 'text-sky-500',
   zapret: 'text-violet-500',
   dns: 'text-emerald-500',
-  psiphon: 'text-amber-500',
   vpn: 'text-indigo-400',
   app: 'text-muted-foreground'
 }
@@ -24,7 +23,6 @@ const sourceLabels: Record<'all' | CoreSource, string> = {
   tgws: 'telegram',
   zapret: 'zapret',
   dns: 'dns',
-  psiphon: 'psiphon',
   vpn: 'vpn',
   app: 'система'
 }

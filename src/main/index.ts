@@ -11,7 +11,6 @@ import { createApplicationMenu } from './resolve/menu'
 import { initShortcut } from './resolve/shortcut'
 import { getTgwsStatus, restartTgws, startTgws, stopTgws } from './core/tgws'
 import { getZapretStatus, restartZapret, startZapret, stopZapret } from './core/zapret'
-import { getPsiphonStatus, restartPsiphon, startPsiphon, stopPsiphon } from './core/psiphon'
 import { getVpnStatus, restartVpn, startVpn, stopVpn } from './core/vpn'
 import { appLog } from './utils/app-logger'
 import { enableAutoRun, disableAutoRun } from './sys/autoRun'
@@ -52,7 +51,6 @@ const initPromise = init()
 
 let wasTgwsRunningBeforeSleep = false
 let wasZapretRunningBeforeSleep = false
-let wasPsiphonRunningBeforeSleep = false
 let wasVpnRunningBeforeSleep = false
 
 app.whenReady().then(async () => {
@@ -101,13 +99,6 @@ app.whenReady().then(async () => {
       showError('Zapret start failed', `${e}`)
     })
   }
-  if (appConfig.psiphon?.autoStart) {
-    appLog('info', 'Автозапуск Psiphon — старт')
-    startPsiphon().catch((e) => {
-      appLog('error', `Автозапуск Psiphon упал: ${e}`)
-      showError('Psiphon start failed', `${e}`)
-    })
-  }
   if (appConfig.vpn?.autoStart) {
     appLog('info', 'Автозапуск VPN — старт')
     startVpn().catch((e) => {
@@ -127,11 +118,10 @@ app.whenReady().then(async () => {
   powerMonitor.on('suspend', () => {
     wasTgwsRunningBeforeSleep = getTgwsStatus().state === 'running'
     wasZapretRunningBeforeSleep = getZapretStatus().state === 'running'
-    wasPsiphonRunningBeforeSleep = getPsiphonStatus().state === 'running'
     wasVpnRunningBeforeSleep = getVpnStatus().state === 'running'
     appLog(
       'info',
-      `Система уходит в сон (tgws=${wasTgwsRunningBeforeSleep}, zapret=${wasZapretRunningBeforeSleep}, psiphon=${wasPsiphonRunningBeforeSleep}, vpn=${wasVpnRunningBeforeSleep})`
+      `Система уходит в сон (tgws=${wasTgwsRunningBeforeSleep}, zapret=${wasZapretRunningBeforeSleep}, vpn=${wasVpnRunningBeforeSleep})`
     )
   })
 
@@ -147,10 +137,6 @@ app.whenReady().then(async () => {
       if (wasZapretRunningBeforeSleep || getZapretStatus().state === 'running') {
         appLog('info', 'Перезапуск Zapret после сна…')
         restartZapret().catch((e) => appLog('warn', `Ошибка перезапуска Zapret после сна: ${e}`))
-      }
-      if (wasPsiphonRunningBeforeSleep || getPsiphonStatus().state === 'running') {
-        appLog('info', 'Перезапуск Psiphon после сна…')
-        restartPsiphon().catch((e) => appLog('warn', `Ошибка перезапуска Psiphon после сна: ${e}`))
       }
       if (wasVpnRunningBeforeSleep || getVpnStatus().state === 'running') {
         appLog('info', 'Перезапуск VPN после сна…')
@@ -186,7 +172,6 @@ function syncKillChildren(): void {
 
     spawnSync('taskkill.exe', ['/F', '/IM', 'TgWsProxy_windows.exe', '/T'], opts)
     spawnSync('taskkill.exe', ['/F', '/IM', 'winws.exe', '/T'], opts)
-    spawnSync('taskkill.exe', ['/F', '/IM', 'psiphon-tunnel-core.exe', '/T'], opts)
     spawnSync('taskkill.exe', ['/F', '/IM', 'sing-box.exe', '/T'], opts)
     spawnSync('taskkill.exe', ['/F', '/IM', 'wireproxy.exe', '/T'], opts)
 
@@ -200,7 +185,7 @@ async function cleanupServices(): Promise<void> {
   if (cleanupRan) return
   cleanupRan = true
   await Promise.race([
-    Promise.all([stopTgws(), stopZapret(), stopPsiphon(), stopVpn()]).catch(() => void 0),
+    Promise.all([stopTgws(), stopZapret(), stopVpn()]).catch(() => void 0),
     new Promise<void>((r) => setTimeout(r, 3000))
   ])
   syncKillChildren()
