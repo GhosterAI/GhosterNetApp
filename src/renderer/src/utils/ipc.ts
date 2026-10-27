@@ -498,6 +498,7 @@ export interface AgUnlockerSettings {
   own_proxy: string
   own_proxy_enabled: boolean
   manual_paths: string[]
+  auto_disabled_providers?: string[]
 }
 
 export interface AgInstallRow {
@@ -569,6 +570,7 @@ export interface AgUnlockerStatus {
   installs: AgInstallRow[]
   gate: AgGateRecord | null
   providers: Array<{ name: string; enabled: boolean }>
+  providerHealth?: Array<{ name: string; ok: boolean; reason: string }>
 }
 
 export const agGetStatus = (deep = false): Promise<AgUnlockerStatus> => invoke('ag:status', deep)

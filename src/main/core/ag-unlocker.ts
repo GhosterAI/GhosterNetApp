@@ -5,6 +5,8 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { promisify } from 'util'
+import { checkAgProviders, type AgProviderHealth } from './ag-provider-health'
+import { appLog } from '../utils/app-logger'
 
 const execFileAsync = promisify(execFile)
 
@@ -47,6 +49,13 @@ export interface AgUnlockerSettings {
   own_proxy: string
   own_proxy_enabled: boolean
   manual_paths: string[]
+  /**
+   * Провайдеры, отключённые автопроверкой здоровья (мёртвый egress или нет
+   * ответа). Хранится отдельно от disabled_providers, чтобы отличать ручные
+   * выключения пользователя от автоматических: вручную включённый провайдер
+   * уходит отсюда, а автоматически — вернётся сам, когда оживёт.
+   */
+  auto_disabled_providers?: string[]
 }
 
 export interface AgInstallRow {
@@ -118,6 +127,8 @@ export interface AgUnlockerStatus {
   installs: AgInstallRow[]
   gate: AgGateRecord | null
   providers: Array<{ name: string; enabled: boolean }>
+  /** Результат последней автопроверки здоровья провайдеров (может отсутствовать до первой проверки). */
+  providerHealth?: Array<{ name: string; ok: boolean; reason: string }>
 }
 
 function getAgDataDir(): string {
@@ -231,6 +242,9 @@ export function loadAgSettings(): AgUnlockerSettings {
         ...raw,
         license_key: raw.license_key || defaults.license_key,
         disabled_providers: Array.isArray(raw.disabled_providers) ? raw.disabled_providers : [],
+        auto_disabled_providers: Array.isArray(raw.auto_disabled_providers)
+          ? raw.auto_disabled_providers
+          : [],
         provider_order:
           Array.isArray(raw.provider_order) && raw.provider_order.length > 0
             ? raw.provider_order
@@ -807,6 +821,10 @@ export async function unpatchAgInstall(
 // Background Relay, Watchdog & NRPT Management
 // ============================================================================
 
+function fileSha256(p: string): string {
+  return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')
+}
+
 async function ensureBinaryInstalled(): Promise<string> {
   const src = agUnlockerBinaryPath()
   if (!fs.existsSync(src)) {
@@ -822,6 +840,7 @@ async function ensureBinaryInstalled(): Promise<string> {
       const sStat = fs.statSync(src)
       const dStat = fs.statSync(dst)
       if (sStat.size !== dStat.size) needsCopy = true
+      else if (fileSha256(src) !== fileSha256(dst)) needsCopy = true
     } catch {
       needsCopy = true
     }
@@ -930,6 +949,197 @@ Clear-DnsClientCache -ErrorAction SilentlyContinue
 }
 
 // ============================================================================
+// Автопроверка здоровья DNS-провайдеров
+// ============================================================================
+
+const HEALTH_CHECK_MIN_INTERVAL_MS = 15 * 60 * 1000
+let providerHealthCache: AgProviderHealth[] | null = null
+let lastHealthCheckAt = 0
+let healthInflight: Promise<void> | null = null
+
+/**
+ * Перезапускает задачу DNS-релея без пересоздания, чтобы ag_dns.exe перечитал
+ * settings.json. Убиваются только процессы релея (аргумент --dns-forwarder);
+ * сторож патча с тем же именем образа не трогается.
+ */
+async function restartRelayTaskLight(): Promise<void> {
+  await runPowerShell(
+    `Stop-ScheduledTask -TaskName '${TASK_DNS}' -ErrorAction SilentlyContinue`,
+    8000
+  )
+  await killRelayOnlyProcesses()
+  await runPowerShell(`Start-ScheduledTask -TaskName '${TASK_DNS}' -ErrorAction SilentlyContinue`, 8000)
+  for (let i = 0; i < 4; i++) {
+    await new Promise((r) => setTimeout(r, 900))
+    if (await isRelayProcessRunning()) return
+    await runPowerShell(`Start-ScheduledTask -TaskName '${TASK_DNS}' -ErrorAction SilentlyContinue`, 5000)
+  }
+}
+
+/** Убивает процессы ag_dns.exe, запущенные с аргументом --dns-forwarder. */
+async function killRelayOnlyProcesses(): Promise<void> {
+  const res = await runPowerShell(
+    `Get-CimInstance Win32_Process -Filter "Name='${EXE_NAME}'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*--dns-forwarder*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`,
+    10000
+  )
+  if (!res.ok) {
+    // Не удалось отличить релей от сторожа — как раньше, снимаем все процессы.
+    await stopRelayProcess()
+  }
+}
+
+let lastBinaryFreshCheckAt = 0
+
+/**
+ * Тихо обновляет установленный бинарник релея до версии из пакета приложения
+ * (например, после обновления GhosterNet с более свежим Antigravity Unlocker).
+ * Обе задачи останавливаются штатно, процессы снимаются, файл заменяется,
+ * задачи запускаются обратно. Вызывается из статуса не чаще раза в час.
+ */
+async function ensureAgBinaryFresh(): Promise<void> {
+  if (Date.now() - lastBinaryFreshCheckAt < 60 * 60 * 1000) return
+  lastBinaryFreshCheckAt = Date.now()
+
+  const src = agUnlockerBinaryPath()
+  if (!src || !fs.existsSync(src)) return
+  const dst = getInstalledExePath()
+  let stale = !fs.existsSync(dst)
+  if (!stale) {
+    try {
+      if (fs.statSync(src).size !== fs.statSync(dst).size || fileSha256(src) !== fileSha256(dst)) {
+        stale = true
+      }
+    } catch {
+      stale = true
+    }
+  }
+  if (!stale) return
+
+  appLog('info', `AG: обновление бинарника релея (${path.basename(src)})`)
+  const dnsInstalled = taskExistsSync(TASK_DNS)
+  const wdInstalled = taskExistsSync(TASK_WATCHDOG)
+  if (dnsInstalled) {
+    await runPowerShell(`Stop-ScheduledTask -TaskName '${TASK_DNS}' -ErrorAction SilentlyContinue`, 8000)
+  }
+  if (wdInstalled) {
+    await runPowerShell(
+      `Stop-ScheduledTask -TaskName '${TASK_WATCHDOG}' -ErrorAction SilentlyContinue`,
+      8000
+    )
+  }
+  await stopRelayProcess()
+  try {
+    fs.mkdirSync(getProgramDataDir(), { recursive: true })
+    fs.copyFileSync(src, dst)
+  } catch (e) {
+    appLog(
+      'error',
+      `AG: не удалось заменить бинарник релея: ${e instanceof Error ? e.message : String(e)}`
+    )
+  }
+  fs.mkdirSync(getAgDataDir(), { recursive: true })
+  try {
+    fs.writeFileSync(getVersionPath(), String(RELAY_VERSION), 'utf8')
+  } catch {
+    // не критично
+  }
+  if (dnsInstalled) {
+    await runPowerShell(`Start-ScheduledTask -TaskName '${TASK_DNS}' -ErrorAction SilentlyContinue`, 8000)
+  }
+  if (wdInstalled) {
+    await runPowerShell(
+      `Start-ScheduledTask -TaskName '${TASK_WATCHDOG}' -ErrorAction SilentlyContinue`,
+      8000
+    )
+  }
+}
+
+/**
+ * Проверяет всех DNS-провайдеров подмены и приводит настройки в соответствие
+ * с результатом: провайдер, который не отвечает или раздаёт адреса, не
+ * принимающие TCP:443 (мёртвый egress), временно отключается, оживший —
+ * включается обратно. Ручные выключения пользователя не затрагиваются.
+ *
+ * Отключённые записываются и в auto_disabled_providers, и в disabled_providers
+ * (последнее читает сам релей), поэтому после изменений задача релея
+ * перезапускается, чтобы новый список вступил в силу.
+ */
+export async function ensureAgProvidersHealthy(force = false): Promise<void> {
+  const settings = loadAgSettings()
+  if (!settings.dns && !settings.local_proxy) {
+    // Релей не используется — пул провайдеров ни на что не влияет.
+    return
+  }
+  if (healthInflight) return healthInflight
+  if (!force && Date.now() - lastHealthCheckAt < HEALTH_CHECK_MIN_INTERVAL_MS) return
+
+  healthInflight = (async () => {
+    lastHealthCheckAt = Date.now()
+    let health: AgProviderHealth[]
+    try {
+      health = await checkAgProviders()
+    } catch (e) {
+      appLog('warn', `AG: автопроверка провайдеров не удалась: ${e instanceof Error ? e.message : String(e)}`)
+      return
+    }
+    providerHealthCache = health
+
+    const fresh = loadAgSettings()
+    const autoDisabled = new Set(fresh.auto_disabled_providers || [])
+    // Ручные выключения: в disabled_providers, но не наши.
+    const manualDisabled = new Set(fresh.disabled_providers.filter((p) => !autoDisabled.has(p)))
+    // Проверяем всех, кроме вручную выключенных (включая ранее автоотключённых — вдруг ожили).
+    const checked = health.filter((h) => !manualDisabled.has(h.name))
+    if (checked.length === 0) return
+
+    const dead = checked.filter((h) => !h.ok).map((h) => h.name)
+    const alive = checked.filter((h) => h.ok).map((h) => h.name)
+
+    // Гард: если живых нет вообще, настройки не трогаем — гонка резолверов
+    // релея сама переберёт провайдеров, а полное обнуление пула ничем не поможет.
+    if (alive.length === 0) {
+      appLog('warn', `AG: живых DNS-провайдеров не найдено (${dead.join(', ')}) — настройки не менялись`)
+      return
+    }
+
+    const newAuto = new Set(dead)
+    const newDisabled = new Set<string>([...manualDisabled, ...newAuto])
+    for (const p of fresh.provider_order) {
+      if (newAuto.has(p) || manualDisabled.has(p)) newDisabled.add(p)
+    }
+    const disabledChanged =
+      JSON.stringify([...newDisabled].sort()) !== JSON.stringify([...fresh.disabled_providers].sort())
+    const autoChanged =
+      JSON.stringify([...newAuto].sort()) !== JSON.stringify([...autoDisabled].sort())
+    if (!disabledChanged && !autoChanged) return
+
+    for (const h of health) {
+      if (!h.ok) {
+        appLog('warn', `AG: провайдер ${h.name} отключён автопроверкой: ${h.reason}`)
+      } else if (autoDisabled.has(h.name) && !newAuto.has(h.name)) {
+        appLog('info', `AG: провайдер ${h.name} ожил и включён обратно: ${h.reason}`)
+      }
+    }
+
+    fresh.disabled_providers = [...newDisabled]
+    fresh.auto_disabled_providers = [...newAuto]
+    saveAgSettings(fresh)
+
+    if (taskExistsSync(TASK_DNS)) {
+      try {
+        await restartRelayTaskLight()
+        appLog('info', 'AG: задача DNS-релея перезапущена после обновления пула провайдеров')
+      } catch {
+        // задача не перезапустилась — релей перечитает настройки при следующем старте
+      }
+    }
+  })().finally(() => {
+    healthInflight = null
+  })
+  return healthInflight
+}
+
+// ============================================================================
 // Public Controller API
 // ============================================================================
 
@@ -961,6 +1171,12 @@ export async function getAgStatus(deep = false): Promise<AgUnlockerStatus> {
       enabled: !settings.disabled_providers.includes(name)
     }))
 
+  // Фоновая автопроверка здоровья провайдеров: не блокирует статус (сетевые
+  // пробы занимают до ~10 с), выполняется не чаще раза в HEALTH_CHECK_MIN_INTERVAL_MS.
+  // Тихое обновление бинарника релея — не чаще раза в час.
+  void ensureAgBinaryFresh().catch(() => void 0)
+  void ensureAgProvidersHealthy().catch(() => void 0)
+
   return {
     binaryAvailable: fs.existsSync(agUnlockerBinaryPath()),
     installedExePath: getInstalledExePath(),
@@ -974,7 +1190,8 @@ export async function getAgStatus(deep = false): Promise<AgUnlockerStatus> {
     settings,
     installs,
     gate,
-    providers
+    providers,
+    providerHealth: providerHealthCache?.map((h) => ({ name: h.name, ok: h.ok, reason: h.reason }))
   }
 }
 
@@ -1004,6 +1221,9 @@ export async function setAgCapability(cap: string, enabled: boolean): Promise<Ag
       settings.dns = enabled
       saveAgSettings(settings)
       if (enabled) {
+        // Перед стартом релея убрать из пуля мёртвых провайдеров: включение
+        // с «выигрывающим гонку» мёртвым egress'ом означало бы сброс соединений.
+        await ensureAgProvidersHealthy(true)
         await enableRelayTask()
         await applyNrptRules()
       } else {
@@ -1095,6 +1315,7 @@ export async function enableAgAll(): Promise<AgUnlockerStatus> {
   saveAgSettings(settings)
 
   await patchAgInstall()
+  await ensureAgProvidersHealthy(true)
   await enableRelayTask()
   await enableWatchdogTask()
   await applyNrptRules()
@@ -1129,11 +1350,13 @@ export async function disableAgAll(): Promise<AgUnlockerStatus> {
 
 export async function repairAgService(): Promise<AgUnlockerStatus> {
   const settings = loadAgSettings()
+  await ensureAgBinaryFresh()
   await enableRelayTask()
   if (settings.auto_patch) {
     await enableWatchdogTask()
   }
   if (settings.dns) {
+    await ensureAgProvidersHealthy(true)
     await applyNrptRules()
   }
   if (settings.local_proxy) {
@@ -1191,7 +1414,13 @@ export async function setAgGroupKey(groupKey: string): Promise<AgUnlockerStatus>
 export async function setAgProvider(name: string, enabled: boolean): Promise<AgUnlockerStatus> {
   const settings = loadAgSettings()
   if (enabled) {
+    // Ручное включение снимает и автопроверочное отключение — пользователь
+    // явно хочет этот провайдер, автопроверка вернёт его при следующей проверке,
+    // если он по-прежнему мёртв (но не чаще раза в HEALTH_CHECK_MIN_INTERVAL_MS).
     settings.disabled_providers = settings.disabled_providers.filter((p) => p !== name)
+    if (Array.isArray(settings.auto_disabled_providers)) {
+      settings.auto_disabled_providers = settings.auto_disabled_providers.filter((p) => p !== name)
+    }
   } else {
     const remaining = DEFAULT_PROVIDERS.filter(
       (p) => p !== name && !settings.disabled_providers.includes(p)

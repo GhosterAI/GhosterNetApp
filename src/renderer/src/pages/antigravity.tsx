@@ -1022,6 +1022,26 @@ const AntigravityPage: React.FC = () => {
                               DoH HTTP/2
                             </span>
                           )}
+                          {status?.settings.auto_disabled_providers?.includes(prov.name) && (
+                            <span
+                              className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] text-red-400"
+                              title={
+                                status?.providerHealth?.find((h) => h.name === prov.name)?.reason ||
+                                'Автопроверка: провайдер не отвечает или раздаёт мёртвые адреса; будет включён обратно, когда оживёт'
+                              }
+                            >
+                              авто: мёртв
+                            </span>
+                          )}
+                          {prov.enabled &&
+                            status?.providerHealth?.find((h) => h.name === prov.name)?.ok === true && (
+                              <span
+                                className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-500/90"
+                                title={status?.providerHealth?.find((h) => h.name === prov.name)?.reason}
+                              >
+                                жив
+                              </span>
+                            )}
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Button
