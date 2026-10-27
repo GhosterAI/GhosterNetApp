@@ -345,52 +345,54 @@ const Home: React.FC = () => {
           ) : null}
         </div>
 
-        {/* 3 Main Power Switches */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4 items-center max-w-5xl mx-auto w-full">
-          <PowerToggle
-            label="Zapret"
-            status={zapret}
-            onToggle={toggleZapret}
-            version={appConfig?.zapret?.installedVersion ?? BUNDLED_ZAPRET_VERSION}
-            disabled={isZapretTesting}
-            disabledReason={
-              isZapretTesting
-                ? 'Идёт тестирование стратегий — переключатель заблокирован'
-                : undefined
-            }
-          />
-          <PowerToggle
-            label="Telegram"
-            status={tgws}
-            onToggle={toggleTgws}
-            version={appConfig?.tgws?.installedVersion ?? BUNDLED_TGWS_VERSION}
-          />
-          <PowerToggle
-            label="VPN"
-            status={vpn}
-            onToggle={toggleVpn}
-            version={
-              vpn.activeServer ? (
-                <span className="inline-flex items-center gap-1.5 truncate max-w-[170px]">
-                  <CountryFlag
-                    code={vpn.activeServer.countryCode || detectCountryCode(vpn.activeServer.name)}
-                    className="w-3.5 h-2.5 rounded-[1px]"
-                  />
-                  <span className="truncate">
-                    {stripEmojis(vpn.activeServer.name) || vpn.activeServer.name}
+        {/* 3 Main Power Switches — по центру окна (компенсация высоты шапки) */}
+        <div className="flex flex-1 items-center justify-center -translate-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center max-w-5xl w-full">
+            <PowerToggle
+              label="Zapret"
+              status={zapret}
+              onToggle={toggleZapret}
+              version={appConfig?.zapret?.installedVersion ?? BUNDLED_ZAPRET_VERSION}
+              disabled={isZapretTesting}
+              disabledReason={
+                isZapretTesting
+                  ? 'Идёт тестирование стратегий — переключатель заблокирован'
+                  : undefined
+              }
+            />
+            <PowerToggle
+              label="Telegram"
+              status={tgws}
+              onToggle={toggleTgws}
+              version={appConfig?.tgws?.installedVersion ?? BUNDLED_TGWS_VERSION}
+            />
+            <PowerToggle
+              label="VPN"
+              status={vpn}
+              onToggle={toggleVpn}
+              version={
+                vpn.activeServer ? (
+                  <span className="inline-flex items-center gap-1.5 truncate max-w-[170px]">
+                    <CountryFlag
+                      code={vpn.activeServer.countryCode || detectCountryCode(vpn.activeServer.name)}
+                      className="w-3.5 h-2.5 rounded-[1px]"
+                    />
+                    <span className="truncate">
+                      {stripEmojis(vpn.activeServer.name) || vpn.activeServer.name}
+                    </span>
                   </span>
-                </span>
-              ) : appConfig?.vpn?.servers?.length ? (
-                `${appConfig.vpn.servers.length} серв.`
-              ) : (
-                'sing-box'
-              )
-            }
-          />
+                ) : appConfig?.vpn?.servers?.length ? (
+                  `${appConfig.vpn.servers.length} серв.`
+                ) : (
+                  'sing-box'
+                )
+              }
+            />
+          </div>
         </div>
 
         {/* Footer controls */}
-        <div className="flex items-center justify-center pb-4">
+        <div className="flex items-center justify-center pb-1">
           {anyProcessActive && (
             <Button
               variant="ghost"
