@@ -18,7 +18,6 @@ import {
   X,
   Copy,
   QrCode,
-  Cloud,
   Cpu
 } from 'lucide-react'
 import BasePage from '@renderer/components/base/base-page'
@@ -42,8 +41,7 @@ import {
   vpnTestLatency,
   vpnSetRoutingMode,
   vpnSetTunMode,
-  vpnSetProcessRouting,
-  warpGenerate
+  vpnSetProcessRouting
 } from '@renderer/utils/ipc'
 import { QrExportModal } from '@renderer/components/qr-export-modal'
 import PowerIcon from '@renderer/assets/on_icon.svg'
@@ -146,7 +144,6 @@ const VpnPage: React.FC = () => {
   const [inputUrl, setInputUrl] = useState('')
   const [showManualInput, setShowManualInput] = useState(false)
   const [addingSub, setAddingSub] = useState(false)
-  const [generatingWarp, setGeneratingWarp] = useState(false)
   const [qrServer, setQrServer] = useState<VpnServer | null>(null)
   const [showProcessRouting, setShowProcessRouting] = useState(false)
   const [processMode, setProcessMode] = useState<ProcessRoutingMode>(vpnCfg?.processRoutingMode ?? 'all')
@@ -279,24 +276,6 @@ const VpnPage: React.FC = () => {
       })
     } finally {
       setAddingSub(false)
-    }
-  }
-
-  // 1-Click Cloudflare WARP Generator
-  const handleGenerateWarp = async (): Promise<void> => {
-    setGeneratingWarp(true)
-    try {
-      const server = await warpGenerate()
-      toast.success('Профиль Cloudflare WARP успешно сгенерирован!', {
-        description: `Добавлен WireGuard сервер: ${server.server}`
-      })
-      mutateAppConfig()
-    } catch (e) {
-      toast.error('Не удалось сгенерировать Cloudflare WARP', {
-        description: e instanceof Error ? e.message : String(e)
-      })
-    } finally {
-      setGeneratingWarp(false)
     }
   }
 
@@ -851,14 +830,14 @@ const VpnPage: React.FC = () => {
             </div>
           )}
 
-          {/* Bottom Action Bar (Happ style: Clipboard + Conf file + 1-Click WARP + Process Routing) */}
+          {/* Bottom Action Bar (Happ style: Clipboard + Conf file + Process Routing) */}
           <div className="p-3 border-t border-border/40 bg-card/60 backdrop-blur-md shrink-0 flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePasteClipboard}
-                disabled={addingSub || generatingWarp}
+                disabled={addingSub}
                 className="flex-1 h-8.5 text-xs gap-1.5 bg-background/40 hover:bg-background/80 border-border/50 rounded-xl"
                 title="Импортировать ссылку подписки или ключи из буфера обмена"
               >
@@ -870,7 +849,7 @@ const VpnPage: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={addingSub || generatingWarp}
+                disabled={addingSub}
                 className="flex-1 h-8.5 text-xs gap-1.5 bg-background/40 hover:bg-background/80 border-border/50 rounded-xl"
                 title="Импортировать файл конфигурации AmneziaWG / WireGuard (.conf)"
               >
@@ -892,20 +871,8 @@ const VpnPage: React.FC = () => {
               </Button>
             </div>
 
-            {/* Smart Tools Bar: 1-Click WARP + Process Routing */}
+            {/* Bottom Tools: Process Routing */}
             <div className="flex items-center gap-2 pt-1 border-t border-border/20">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleGenerateWarp}
-                disabled={generatingWarp}
-                className="flex-1 h-8 text-[11px] gap-1.5 border-cyan-500/30 text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl"
-                title="Автоматически сгенерировать бесплатный WireGuard конфиг Cloudflare WARP"
-              >
-                <Cloud className={`size-3.5 ${generatingWarp ? 'animate-spin' : ''}`} />
-                <span>{generatingWarp ? 'Генерация…' : '1-Click WARP'}</span>
-              </Button>
-
               <Button
                 variant="outline"
                 size="sm"

@@ -146,8 +146,6 @@ import {
   setVpnProcessRouting,
   testVpnLatencies
 } from '../core/vpn'
-import { generateCloudflareWarpServer } from '../core/warp-generator'
-import { runSpeedtest } from '../core/speedtest'
 import { applyDiscordVoiceFix } from '../core/discord-fixer'
 import { triggerFailoverSwitch } from '../core/zapret-failover'
 import { execFile } from 'node:child_process'
@@ -620,41 +618,6 @@ export function registerIpcMainHandlers(): void {
   ipcMain.handle('vpn:setProcessRouting', h((mode, list) =>
     setVpnProcessRouting(mode as ProcessRoutingMode, list as string[])
   ))
-
-  // ---- Cloudflare WARP 1-click generator ----------------------------------
-  ipcMain.handle('warp:generate', h(async () => {
-    const warpServer = await generateCloudflareWarpServer()
-    const cfg = await getAppConfig()
-    const existingServers = cfg.vpn?.servers ?? []
-    // Replace existing warp server or add new
-    const filtered = existingServers.filter((s) => !s.name.includes('Cloudflare WARP'))
-    filtered.unshift(warpServer)
-
-    await patchAppConfig({
-      vpn: {
-        ...(cfg.vpn as VpnConfig),
-        servers: filtered,
-        selectedServerId: warpServer.id
-      }
-    })
-    await selectVpnServer(warpServer.id)
-    return warpServer
-  }))
-
-  // ---- Built-in Speedtest -------------------------------------------------
-  ipcMain.handle('speedtest:run', async (e) => {
-    try {
-      const win = BrowserWindow.fromWebContents(e.sender)
-      const res = await runSpeedtest((progress) => {
-        if (win && !win.isDestroyed()) {
-          win.webContents.send('speedtest:progress', progress)
-        }
-      })
-      return { ok: true, value: res }
-    } catch (err: unknown) {
-      return { ok: false, message: err instanceof Error ? err.message : String(err) }
-    }
-  })
 
   // ---- Discord Voice & Video Fixer ----------------------------------------
   ipcMain.handle('discord:fixVoice', h(() => applyDiscordVoiceFix()))

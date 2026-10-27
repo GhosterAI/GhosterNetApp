@@ -138,23 +138,6 @@ interface AppConfig {
 type VpnRoutingMode = 'bypass-ru' | 'global' | 'proxy-only' | 'ai-socials'
 type ProcessRoutingMode = 'all' | 'include' | 'exclude'
 
-interface SpeedtestResult {
-  pingMs: number
-  jitterMs: number
-  downloadMbps: number
-  uploadMbps?: number
-  isp?: string
-  serverLocation?: string
-}
-
-interface TrafficStats {
-  downSpeedBps: number
-  upSpeedBps: number
-  totalDownBytes: number
-  totalUpBytes: number
-  activeConnections?: number
-}
-
 interface ZapretFailoverState {
   enabled: boolean
   lastSwitchAt?: number

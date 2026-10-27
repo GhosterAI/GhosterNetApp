@@ -648,21 +648,6 @@ export const vpnSetProcessRouting = (
   list: string[]
 ): Promise<void> => invoke('vpn:setProcessRouting', mode, list)
 
-// ---- Cloudflare WARP --------------------------------------------------------
-export const warpGenerate = (): Promise<VpnServer> => invoke('warp:generate')
-
-// ---- Speedtest --------------------------------------------------------------
-export interface SpeedtestProgress {
-  phase: 'ping' | 'download' | 'upload' | 'done' | 'error'
-  pingMs?: number
-  jitterMs?: number
-  currentSpeedMbps?: number
-  progressPercent?: number
-  result?: SpeedtestResult
-  error?: string
-}
-export const speedtestRun = (): Promise<SpeedtestResult> => invoke('speedtest:run')
-
 // ---- Discord Voice & Video Fixer --------------------------------------------
 export interface DiscordVoiceFixResult {
   ok: boolean

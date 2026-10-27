@@ -20,11 +20,8 @@ import {
 } from '@renderer/utils/ipc'
 import { Button } from '@renderer/components/ui/button'
 import { POWER_ON_BANNER_STYLE, BUNDLED_TGWS_VERSION, BUNDLED_ZAPRET_VERSION } from '@renderer/lib/utils'
-import { RotateCw, Layers, Gauge } from 'lucide-react'
+import { RotateCw, Layers } from 'lucide-react'
 import { CountryFlag, detectCountryCode } from '@renderer/components/ui/country-flag'
-import { LiveHud } from '@renderer/components/live-hud'
-import { AiDashboardWidget } from '@renderer/components/ai-dashboard'
-import { SpeedtestModal } from '@renderer/components/speedtest-modal'
 import Power from '@renderer/assets/on_icon.svg'
 import Pause from '@renderer/assets/pause_icon.svg'
 
@@ -314,8 +311,6 @@ const Home: React.FC = () => {
     }
   }
 
-  const [speedtestOpen, setSpeedtestOpen] = useState(false)
-
   const anyProcessActive =
     tgws.state === 'running' ||
     tgws.state === 'error' ||
@@ -327,8 +322,8 @@ const Home: React.FC = () => {
   return (
     <BasePage>
       <div className="relative flex flex-col h-full overflow-y-auto px-4 py-2 space-y-4">
-        {/* Top Bar: Profiles + Live Traffic HUD */}
-        <div className="flex flex-wrap items-center justify-between gap-2 max-w-5xl mx-auto w-full">
+        {/* Top Bar: Profiles */}
+        <div className="flex flex-wrap items-center gap-2 max-w-5xl mx-auto w-full">
           {profiles.length > 1 ? (
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground mr-1">
@@ -347,23 +342,7 @@ const Home: React.FC = () => {
                 </Button>
               ))}
             </div>
-          ) : (
-            <div />
-          )}
-
-          <div className="flex items-center gap-2">
-            <LiveHud />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setSpeedtestOpen(true)}
-              className="h-8 gap-1.5 rounded-xl border-border/40 text-xs font-medium hover:bg-muted/40"
-              title="Замерить скорость"
-            >
-              <Gauge className="size-3.5 text-primary" />
-              Speedtest
-            </Button>
-          </div>
+          ) : null}
         </div>
 
         {/* 3 Main Power Switches */}
@@ -410,11 +389,6 @@ const Home: React.FC = () => {
           />
         </div>
 
-        {/* AI Dashboard Widget */}
-        <div className="max-w-5xl mx-auto w-full">
-          <AiDashboardWidget />
-        </div>
-
         {/* Footer controls */}
         <div className="flex items-center justify-center pb-4">
           {anyProcessActive && (
@@ -430,9 +404,6 @@ const Home: React.FC = () => {
             </Button>
           )}
         </div>
-
-        {/* Speedtest Modal */}
-        <SpeedtestModal open={speedtestOpen} onClose={() => setSpeedtestOpen(false)} />
 
         {appVersion && (
           <div className="pointer-events-none absolute bottom-2 right-3 text-[11px] text-muted-foreground/50 select-none">
