@@ -2,9 +2,9 @@
 
 <div align="center">
 
-  <img src="https://raw.githubusercontent.com/GhosterAI/GhosterNet/main/assets/ghost-sculpture.svg" width="160" height="160" alt="GhosterNet Logo" />
+  <img src="./src/renderer/src/assets/ghost-sculpture.svg" width="160" height="160" alt="GhosterNet Logo" />
 
-  # GhosterNet v3.1.0
+  # GhosterNet v3.3.0
   
   **Единый сетевой инструмент для Windows 10 & 11 (x64)**  
   *Обход DPI (Zapret + WinDivert), Telegram MTProto WS, Universal VPN (sing-box + Wintun TUN), AmneziaWG (AWG), зашифрованный DNS-AI и разблокировка Google Antigravity IDE.*
@@ -19,7 +19,7 @@
   <p align="center">
     <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest/download/GhosterNet_x64.exe"><strong>Скачать установщик (.exe)</strong></a> •
     <a href="https://github.com/GhosterAI/GhosterNetApp/releases/latest/download/GhosterNet_x64-portable.7z"><strong>Скачать Portable (.7z)</strong></a> •
-    <a href="https://github.com/GhosterAI/GhosterNet"><strong>Официальный сайт</strong></a> •
+    <a href="#что-нового-в-330"><strong>Что нового</strong></a> •
     <a href="#быстрый-старт"><strong>Быстрый старт</strong></a> •
     <a href="#архитектура-и-модули"><strong>Архитектура</strong></a> •
     <a href="#часто-задаваемые-вопросы-faq"><strong>FAQ</strong></a>
@@ -37,6 +37,7 @@
 ## Содержание
 
 - [О проекте](#о-проекте)
+- [Что нового в 3.3.0](#что-нового-в-330)
 - [Сравнение подходов](#сравнение-подходов)
 - [Архитектура и модули](#архитектура-и-модули)
   - [1. Zapret DPI Bypass](#1-zapret-dpi-bypass)
@@ -88,9 +89,30 @@ flowchart LR
 
 ---
 
+## Что нового в 3.3.0
+
+Релиз 3.3.0 — «чистка» интерфейса: из приложения убраны четыре вспомогательные функции, которые дублировали уже существующие инструменты или работали нестабильно. На работу обхода DPI, Telegram WS, VPN и DNS-AI это не влияет.
+
+**Удалено**
+
+| Функция | Что делать вместо неё |
+| :--- | :--- |
+| Генератор Cloudflare WARP «в 1 клик» | Добавить профиль вручную: кнопки «Из буфера», «.conf файл» или `+` на странице **VPN**. Любой WireGuard/AmneziaWG-конфиг, включая WARP, импортируется как обычно. |
+| Виджет «AI Dashboard» (статус нейросетей + «1-Click AI Fix») | Проверка ИИ-сервисов и автонастройка Gemini в hosts остались на странице **Сеть и DNS** (блок DNS-AI). |
+| Виджет «Live HUD» (график скорости на главной) | Индикатор состояния сервисов остался на главной (Zapret / Telegram / VPN). Для контроля расхода трафика — «Диспетчер задач» Windows или любой монитор сети. |
+| Встроенный Speedtest (спидометр) | Любой внешний замер скорости — тест больше не нагружает канал приложением. |
+
+**Прочее**
+
+- Удалён мёртвый код и неиспользуемые IPC-каналы (`warp:generate`, `speedtest:run`, поток `traffic:tick`), контракт main ↔ renderer сократился до 126 обработчиков.
+- JS-бандл рендерера уменьшился примерно на 18 КБ, CSS — на 2.9 КБ, стартовый main-процесс — на 9 КБ.
+- Обновлены документация и ссылки в README.
+
+---
+
 ## Сравнение подходов
 
-| Характеристика | Обычный VPN | GoodbyeDPI | Zapret (консольный) | GhosterNet v3.0.0 |
+| Характеристика | Обычный VPN | GoodbyeDPI | Zapret (консольный) | GhosterNet v3.3.0 |
 | :--- | :---: | :---: | :---: | :---: |
 | **Скорость загрузки** | Ограничена сервером | 100% канала | 100% канала | **100% канала** |
 | **Задержка в играх** | +50...150 мс | Без изменений | Без изменений | **0 мс задержки (игровой фильтр)** |
