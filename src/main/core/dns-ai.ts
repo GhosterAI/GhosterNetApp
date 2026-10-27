@@ -217,8 +217,13 @@ function readEndpoints(): { dohUrl: string; dotHost: string; ipv4: string[]; ipv
   }
 }
 
-async function queryServiceState(): Promise<{ installed: boolean; running: boolean }> {
-  if (process.platform !== 'win32') return { installed: false, running: false }
+async function queryServiceState(): Promise<{
+  installed: boolean
+  running: boolean
+  /** Путь к бинарнику из регистрации службы (BINARY_PATH_NAME), без аргументов. */
+  binPath: string | null
+}> {
+  if (process.platform !== 'win32') return { installed: false, running: false, binPath: null }
   try {
     const { stdout } = await execFileAsync('sc.exe', ['query', SERVICE_NAME], {
       windowsHide: true,
@@ -226,9 +231,28 @@ async function queryServiceState(): Promise<{ installed: boolean; running: boole
     })
     const installed = !stdout.includes('1060')
     const running = /STATE\s*:\s*4\s+RUNNING/i.test(stdout)
-    return { installed, running }
+    let binPath: string | null = null
+    if (installed) {
+      try {
+        const { stdout: qc } = await execFileAsync('sc.exe', ['qc', SERVICE_NAME], {
+          windowsHide: true,
+          timeout: 4000
+        })
+        const m = qc.match(/BINARY_PATH_NAME\s*:\s*(.+)/i)
+        if (m) {
+          // «C:\...\DNS-AI.exe service» → путь без аргумента запуска
+          binPath = m[1]
+            .trim()
+            .replace(/^"+|"+$/g, '')
+            .replace(/\s+service$/i, '')
+        }
+      } catch {
+        // конфиг не прочитался — не критично
+      }
+    }
+    return { installed, running, binPath }
   } catch {
-    return { installed: false, running: false }
+    return { installed: false, running: false, binPath: null }
   }
 }
 
@@ -406,7 +430,21 @@ async function ensureDaemonReady(): Promise<DnsAiPipeStatus | null> {
     throw new Error(`Бинарник DNS-AI не найден: ${bin}`)
   }
 
-  const svc = await queryServiceState()
+  let svc = await queryServiceState()
+  if (svc.installed && !svc.running && svc.binPath && !existsSync(svc.binPath)) {
+    // Регистрация службы указывает на бинарник, которого больше нет (бинарник
+    // переезжал между runtime и resources при обновлениях, или каталог
+    // обновления был очищен). StartService такую службу молча провалит, пайп
+    // не появится никогда — переустанавливаем регистрацию с текущего пути.
+    emitLog('warn', 'dns', 'Служба DNS-AI указывает на несуществующий бинарник — переустанавливаю')
+    try {
+      await execFileAsync(bin, ['uninstall'], { windowsHide: true, timeout: 10000 })
+    } catch {
+      // попробуем поставить поверх
+    }
+    svc = await queryServiceState()
+  }
+
   if (svc.installed && !svc.running) {
     try {
       await execFileAsync(bin, ['start'], { windowsHide: true, timeout: 10000 })
@@ -442,6 +480,31 @@ async function ensureDaemonReady(): Promise<DnsAiPipeStatus | null> {
       if (check.ok && check.status) return check.status
     } catch {
       // retry
+    }
+    // Если к середине ожидания служба так и не встала (start провалился
+    // молча) — поднимаем консольный демон как последний резерв.
+    if (i === 8) {
+      const mid = await queryServiceState()
+      if (!mid.running && mid.installed && mid.binPath && !existsSync(mid.binPath)) {
+        // сервис всё ещё указывает в никуда — чистим и идём в run-console
+        try {
+          await execFileAsync(bin, ['uninstall'], { windowsHide: true, timeout: 10000 })
+        } catch {
+          // ignore
+        }
+      }
+      if (!mid.running && (!consoleDaemon || consoleDaemon.killed)) {
+        consoleDaemon = spawn(bin, ['run-console'], {
+          cwd: path.dirname(bin),
+          windowsHide: true,
+          stdio: 'ignore',
+          detached: false
+        })
+        consoleDaemon.on('exit', () => {
+          consoleDaemon = null
+        })
+        emitLog('info', 'dns', 'Запущен фоновый процесс DNS-AI (run-console)')
+      }
     }
   }
   return null
@@ -513,6 +576,12 @@ async function syncCachedSettingsToDaemon(
 export async function enableDnsAi(): Promise<DnsAiStatusSnapshot> {
   const readyStatus = await ensureDaemonReady()
   const currentStatus = await syncCachedSettingsToDaemon(readyStatus)
+
+  if (!currentStatus) {
+    // Ни служба, ни консольный демон не поднялись — отдаём человекочитаемую
+    // ошибку вместо ENOENT из pipe-воркера.
+    throw new Error('Не удалось запустить фоновую службу DNS-AI — см. журнал приложения')
+  }
 
   if (currentStatus?.enabled) {
     emitLog(
